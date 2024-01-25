@@ -25,13 +25,15 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.Picker
+import androidx.wear.compose.material.ToggleButton
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.wear.compose.material.rememberPickerState
+import androidx.compose.runtime.mutableStateOf
 
-import com.example.phasig.R
+//import com.example.phasig.R
 import com.example.phasig.presentation.theme.PhasigTheme
 import java.text.DecimalFormat
 
@@ -51,11 +53,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun WearApp(greetingName: String) {
-    //val items = listOf("One", "Two", "Three", "Four", "Five")
+    val btcap = listOf("❚❚", "▶")
     val df = DecimalFormat("#.##")
-    val items = List(101) { df.format(it * 0.01) }
-    val state = rememberPickerState(items.size)
-    val contentDescription by remember { derivedStateOf { "${state.selectedOption + 1}" } }
+    val pkrItems = List(101) { df.format(it * 0.01) }
+    val pkrState = rememberPickerState(pkrItems.size)
+    var pkrEnabled by remember { mutableStateOf(true) }
+    val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
+    var btnChecked by remember { mutableStateOf(true) }
 
     PhasigTheme {
         Box(
@@ -66,14 +70,35 @@ fun WearApp(greetingName: String) {
         ) {
             Text(
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
-                text = "Threshold: ${items[state.selectedOption]}"
+                text = "Threshold: ${pkrItems[pkrState.selectedOption]}"
             )
             Picker(
                 modifier = Modifier.size(100.dp, 100.dp),
-                state = state,
+                state = pkrState,
                 contentDescription = contentDescription,
+                userScrollEnabled = pkrEnabled
             ) {
-                Text(items[it])
+                Text(pkrItems[it])
+            }
+
+            ToggleButton(
+                enabled = true,
+                checked = btnChecked,
+                onCheckedChange = {
+                    btnChecked = it
+
+                    if (btnChecked)
+                    { // pause
+                        pkrEnabled = true;
+                    }
+                    else
+                    { // play
+                        pkrEnabled = false;
+                    }
+                },
+                modifier = Modifier.align(Alignment.BottomCenter).padding(top = 10.dp)
+            ) {
+                Text("${btcap[if(btnChecked) 1 else 0]}")
             }
         }
     }
