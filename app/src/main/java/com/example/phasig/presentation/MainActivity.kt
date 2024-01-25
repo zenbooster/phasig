@@ -33,6 +33,7 @@ import androidx.wear.compose.material.rememberPickerState
 
 import com.example.phasig.R
 import com.example.phasig.presentation.theme.PhasigTheme
+import java.text.DecimalFormat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +52,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun WearApp(greetingName: String) {
     //val items = listOf("One", "Two", "Three", "Four", "Five")
-    val items = List(101) { it * 0.01 }
+    val df = DecimalFormat("#.##")
+    val items = List(101) { df.format(it * 0.01) }
     val state = rememberPickerState(items.size)
     val contentDescription by remember { derivedStateOf { "${state.selectedOption + 1}" } }
 
@@ -71,7 +73,7 @@ fun WearApp(greetingName: String) {
                 state = state,
                 contentDescription = contentDescription,
             ) {
-                Text(items[it].toString())
+                Text(items[it])
             }
         }
     }
