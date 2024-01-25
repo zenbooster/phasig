@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
 fun WearApp(greetingName: String) {
     val btcap = listOf("❚❚", "▶")
     val df = DecimalFormat("#.##")
-    val pkrItems = List(101) { df.format(it * 0.01) }
+    val pkrItems = List(101) { df.format(it) }
     val pkrState = rememberPickerState(pkrItems.size)
     var pkrEnabled by remember { mutableStateOf(true) }
     val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
@@ -95,12 +95,17 @@ fun WearApp(greetingName: String) {
 
                     if (btnChecked)
                     { // pause
-                        pkrEnabled = true;
+                        pkrEnabled = true
+                        ctx.stopService(mysvcIntent)
                     }
                     else
                     { // play
                         pkrEnabled = false;
-                        ctx.startService(mysvcIntent);
+                        val threshold = pkrItems[pkrState.selectedOption].toDouble()
+                        mysvcIntent.putExtra("threshold", threshold)
+                        mysvcIntent.setAction("apply")
+                        //ctx.startForegroundService(mysvcIntent)
+                        ctx.startService(mysvcIntent)
                     }
                 },
                 modifier = Modifier.align(Alignment.BottomCenter).padding(top = 10.dp)

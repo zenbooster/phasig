@@ -12,13 +12,48 @@ import android.widget.Toast
 import android.os.Vibrator
 import android.os.VibrationEffect;
 //import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import java.lang.Math.sqrt
 
-class MyService : Service() {
-    private var serviceLooper: Looper? = null
-    private var serviceHandler: ServiceHandler? = null
+class MyService : Service(), SensorEventListener {
+    private var mSensorManager : SensorManager ?= null
+    private var mAccelerometer : Sensor ?= null
+    //private var serviceLooper: Looper? = null
+    //private var serviceHandler: ServiceHandler? = null
+    public var threshold : Double = 0.0;
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int)
+    {
+    }
+
+    override fun onSensorChanged(event: SensorEvent?)
+    {
+        if (event != null) {
+            //ground!!.updateMe(event.values[1] , event.values[0])
+
+            val arr = event.values
+            val squareSum = arr.map { n: Float -> (n.toDouble() * n.toDouble()) }.sum()
+            val v = sqrt(squareSum)
+
+            if (v > threshold)
+            {
+                val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+                val vibrationEffect1: VibrationEffect
+                vibrationEffect1 =
+                    VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE)
+
+                // it is safe to cancel other vibrations currently taking place
+                vibrator.cancel()
+                vibrator.vibrate(vibrationEffect1)
+            }
+        }
+    }
 
     // Handler that receives messages from the thread
-    private inner class ServiceHandler(looper: Looper) : Handler(looper) {
+    /*private inner class ServiceHandler(looper: Looper) : Handler(looper) {
 
         override fun handleMessage(msg: Message) {
             // Normally we would do some work here, like download a file.
@@ -45,6 +80,12 @@ class MyService : Service() {
             // the service in the middle of handling another job
             stopSelf(msg.arg1)
         }
+    }*/
+
+    override fun onDestroy()
+    {
+        mSensorManager!!.unregisterListener(this)
+        //super.onDestroy()
     }
 
     override fun onCreate() {
@@ -52,27 +93,37 @@ class MyService : Service() {
         // separate thread because the service normally runs in the process's
         // main thread, which we don't want to block.  We also make it
         // background priority so CPU-intensive work will not disrupt our UI.
-        HandlerThread("ServiceStartArguments", Process.THREAD_PRIORITY_BACKGROUND).apply {
+        /*HandlerThread("ServiceStartArguments", Process.THREAD_PRIORITY_BACKGROUND).apply {
             start()
 
             // Get the HandlerThread's Looper and use it for our Handler
-            serviceLooper = looper
-            serviceHandler = ServiceHandler(looper)
-        }
+            //serviceLooper = looper
+            //serviceHandler = ServiceHandler(looper)
+        }*/
+        mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        mAccelerometer = mSensorManager!!.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show()
 
-        // For each start request, send a message to start a job and deliver the
-        // start ID so we know which request we're stopping when we finish the job
-        serviceHandler?.obtainMessage()?.also { msg ->
-            msg.arg1 = startId
-            serviceHandler?.sendMessage(msg)
+        if (intent.getAction().equals("apply"))
+        {
+            threshold = intent.getExtras()!!.getDouble("threshold")
         }
 
+        mSensorManager!!.registerListener(this,mAccelerometer,
+            SensorManager.SENSOR_DELAY_GAME)
+
+        // For each start request, send a message to start a job and deliver the
+        // start ID so we know which request we're stopping when we finish the job
+        /*serviceHandler?.obtainMessage()?.also { msg ->
+            msg.arg1 = startId
+            serviceHandler?.sendMessage(msg)
+        }*/
+
         // If we get killed, after returning from here, restart
-        return START_STICKY
+        return START_REDELIVER_INTENT //START_STICKY
     }
 
     override fun onBind(intent: Intent): IBinder {
