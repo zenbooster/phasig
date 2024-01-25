@@ -32,6 +32,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.wear.compose.material.rememberPickerState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import com.example.phasig.MyService
 
 //import com.example.phasig.R
 import com.example.phasig.presentation.theme.PhasigTheme
@@ -60,6 +63,9 @@ fun WearApp(greetingName: String) {
     var pkrEnabled by remember { mutableStateOf(true) }
     val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
     var btnChecked by remember { mutableStateOf(true) }
+    //val mysvcIntent: Intent by lazy { Intent(this, MyService::class.java) }
+    val ctx = LocalContext.current
+    val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
 
     PhasigTheme {
         Box(
@@ -94,6 +100,7 @@ fun WearApp(greetingName: String) {
                     else
                     { // play
                         pkrEnabled = false;
+                        ctx.startService(mysvcIntent);
                     }
                 },
                 modifier = Modifier.align(Alignment.BottomCenter).padding(top = 10.dp)
