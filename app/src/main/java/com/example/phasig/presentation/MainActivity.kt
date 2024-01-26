@@ -58,7 +58,8 @@ class MainActivity : ComponentActivity() {
         setTheme(android.R.style.Theme_DeviceDefault)
 
         setContent {
-            WearApp("Android")
+            WearApp("Android", this)
+            //WearApp("Android", null)
         }
     }
 
@@ -75,22 +76,25 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WearApp(greetingName: String) {
-    val ctx = LocalContext.current
-    val sharedPref = ctx.getSharedPreferences("myPref", Context.MODE_PRIVATE)
+fun WearApp(greetingName: String, ctx: Context?) {
+    //val ctx = LocalContext.current
+    val sharedPref = ctx?.getSharedPreferences("myPref", Context.MODE_PRIVATE) ?: null
     val btcap = listOf("❚❚", "▶")
     val df = DecimalFormat("#.##")
     val pkrItems = List(101) { df.format(it) }
-    val activity = ctx as MainActivity
-    val pkrIdx = sharedPref!!.getInt("pkrIdx", 12)
+    val pkrIdx = sharedPref?.getInt("pkrIdx", 12) ?: 12
     val pkrState = rememberPickerState(pkrItems.size, pkrIdx)
     var pkrEnabled by remember { mutableStateOf(true) }
     val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
     var btnChecked by remember { mutableStateOf(true) }
     val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
 
-    activity.sharedPref = sharedPref
-    activity.pkrState = pkrState
+    if(ctx != null) {
+        val activity = ctx as MainActivity
+
+        activity.sharedPref = sharedPref
+        activity.pkrState = pkrState
+    }
 
     PhasigTheme {
         Box(
@@ -121,7 +125,7 @@ fun WearApp(greetingName: String) {
                     if (btnChecked)
                     { // pause
                         pkrEnabled = true
-                        ctx.stopService(mysvcIntent)
+                        ctx?.stopService(mysvcIntent)
                     }
                     else
                     { // play
@@ -131,7 +135,7 @@ fun WearApp(greetingName: String) {
                         mysvcIntent.setAction("apply")
 
                         //ctx.startForegroundService(mysvcIntent)
-                        ctx.startService(mysvcIntent)
+                        ctx?.startService(mysvcIntent)
                     }
                 },
                 modifier = Modifier.align(Alignment.BottomCenter).padding(top = 10.dp)
@@ -142,18 +146,8 @@ fun WearApp(greetingName: String) {
     }
 }
 
-/*@Composable
-fun Greeting(greetingName: String) {
-    Text(
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colors.primary,
-            text = stringResource(R.string.hello_world, greetingName)
-    )
-}*/
-
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp("Preview Android")
+    WearApp("Preview Android", null)
 }
