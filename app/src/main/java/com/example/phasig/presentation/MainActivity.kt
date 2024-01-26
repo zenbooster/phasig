@@ -25,15 +25,21 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.Picker
+import androidx.wear.compose.material.PickerScope
+import androidx.wear.compose.material.PickerState
 import androidx.wear.compose.material.ToggleButton
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.wear.compose.material.rememberPickerState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
+import android.content.Context
+import android.content.SharedPreferences
+//import android.content.SharedPreferences
 import com.example.phasig.MyService
 
 //import com.example.phasig.R
@@ -41,6 +47,9 @@ import com.example.phasig.presentation.theme.PhasigTheme
 import java.text.DecimalFormat
 
 class MainActivity : ComponentActivity() {
+    var sharedPref: SharedPreferences ?= null
+    var pkrState : PickerState ?= null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
@@ -52,20 +61,36 @@ class MainActivity : ComponentActivity() {
             WearApp("Android")
         }
     }
+
+    override fun onPause()
+    {
+        //super.onPause();
+        with(sharedPref!!.edit())
+        {
+            putInt("pkrIdx", pkrState!!.selectedOption)
+            apply()
+        }
+        super.onPause();
+    }
 }
 
 @Composable
 fun WearApp(greetingName: String) {
+    val ctx = LocalContext.current
+    val sharedPref = ctx.getSharedPreferences("myPref", Context.MODE_PRIVATE)
     val btcap = listOf("❚❚", "▶")
     val df = DecimalFormat("#.##")
     val pkrItems = List(101) { df.format(it) }
-    val pkrState = rememberPickerState(pkrItems.size)
+    val activity = ctx as MainActivity
+    val pkrIdx = sharedPref!!.getInt("pkrIdx", 12)
+    val pkrState = rememberPickerState(pkrItems.size, pkrIdx)
     var pkrEnabled by remember { mutableStateOf(true) }
     val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
     var btnChecked by remember { mutableStateOf(true) }
-    //val mysvcIntent: Intent by lazy { Intent(this, MyService::class.java) }
-    val ctx = LocalContext.current
     val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
+
+    activity.sharedPref = sharedPref
+    activity.pkrState = pkrState
 
     PhasigTheme {
         Box(
@@ -82,7 +107,7 @@ fun WearApp(greetingName: String) {
                 modifier = Modifier.size(100.dp, 100.dp),
                 state = pkrState,
                 contentDescription = contentDescription,
-                userScrollEnabled = pkrEnabled
+                userScrollEnabled = pkrEnabled,
             ) {
                 Text(pkrItems[it])
             }
@@ -104,6 +129,7 @@ fun WearApp(greetingName: String) {
                         val threshold = pkrItems[pkrState.selectedOption].toDouble()
                         mysvcIntent.putExtra("threshold", threshold)
                         mysvcIntent.setAction("apply")
+
                         //ctx.startForegroundService(mysvcIntent)
                         ctx.startService(mysvcIntent)
                     }
