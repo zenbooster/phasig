@@ -36,11 +36,19 @@ import androidx.compose.runtime.mutableStateOf
 import android.content.Intent
 import android.content.Context
 import android.content.SharedPreferences
+import android.view.MotionEvent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 
 import com.example.phasig.MyService
 
@@ -78,6 +86,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun WearApp(greetingName: String, ctx: Context?) {
     //val ctx = LocalContext.current
@@ -94,6 +103,36 @@ fun WearApp(greetingName: String, ctx: Context?) {
 
     val listState = rememberScalingLazyListState()
     var expandedState by remember { mutableStateOf(false) }
+    // begin
+    class TimePickerState(
+        initiallySelectedOptionH: Int = 0,
+        initiallySelectedOptionM: Int = 0
+    ) {
+        val hourState: PickerState
+        val minuteState: PickerState
+        var selectedColumn by mutableStateOf(0)
+
+        init
+        {
+            hourState = PickerState(
+                initialNumberOfOptions = 24,
+                initiallySelectedOption = initiallySelectedOptionH
+            )
+            minuteState = PickerState(
+                initialNumberOfOptions = 60,
+                initiallySelectedOption = initiallySelectedOptionM
+            )
+        }
+    }
+
+    @Composable
+    fun rememberTimePickerState(
+        initiallySelectedOptionH: Int,
+        initiallySelectedOptionM: Int
+    ) = remember { TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM) }
+
+    var timePickerStateBegin = rememberTimePickerState(4, 0)
+    var timePickerStateEnd = rememberTimePickerState(7, 0)
 
     if(ctx != null) {
         val activity = ctx as MainActivity
@@ -109,126 +148,134 @@ fun WearApp(greetingName: String, ctx: Context?) {
                     .background(MaterialTheme.colors.background),
                 contentAlignment = Alignment.Center
         ) {
-            /*Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colors.background),
-                contentAlignment = Alignment.Center
-            ) {*/
-                ScalingLazyColumn(
-                    //contentPadding = PaddingValues(top = 1.dp),
-                    state = listState,
-                    modifier = Modifier
-                        //.align(Alignment.TopCenter)
-                        .padding(top = 1.dp)
-                        .fillMaxWidth()
+            @Composable
+            fun TimePicker(timePickerState: TimePickerState)
+            {
+                val textStyle = MaterialTheme.typography.display1
+
+                @Composable
+                fun TP_Option(column: Int, text: String) = Box(modifier = Modifier.fillMaxSize()) {
+                    Text(
+                        text = text, style = textStyle,
+                        color = if (timePickerState.selectedColumn == column) MaterialTheme.colors.secondary
+                        else MaterialTheme.colors.onBackground,
+                        modifier = Modifier
+                            .align(Alignment.Center).wrapContentSize()
+                            .pointerInteropFilter {
+                                if (it.action == MotionEvent.ACTION_DOWN) timePickerState.selectedColumn = column
+                                true
+                            }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                 ) {
-                    item {
-                        ExpandableCard(title = "Threshold: ${pkrItems[pkrState.selectedOption]}") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colors.background).align(Alignment.Center),
+                    val hourContentDescription by remember {
+                        derivedStateOf { "${timePickerState.hourState.selectedOption + 1 } hours" }
+                    }
+                    Picker(
+                        readOnly = timePickerState.selectedColumn != 0,
+                        state = timePickerState.hourState,
+                        modifier = Modifier.size(64.dp, 100.dp),
+                        contentDescription = hourContentDescription,
+                        option = { hour: Int -> TP_Option(0, "%2d".format(hour)) }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(text = ":", style = textStyle, color = MaterialTheme.colors.onBackground)
+                    Spacer(Modifier.width(8.dp))
+
+                    val minuteContentDescription by remember {
+                        derivedStateOf { "${timePickerState.minuteState.selectedOption} minutes" }
+                    }
+                    Picker(
+                        readOnly = timePickerState.selectedColumn != 1,
+                        state = timePickerState.minuteState,
+                        modifier = Modifier.size(64.dp, 100.dp),
+                        contentDescription = minuteContentDescription,
+                        option = { minute: Int -> TP_Option(1, "%02d".format(minute)) }
+                    )
+                }
+            }
+
+            ScalingLazyColumn(
+                //contentPadding = PaddingValues(top = 1.dp),
+                state = listState,
+                modifier = Modifier
+                    .padding(top = 1.dp)
+                    .fillMaxWidth()
+            ) {
+                item {
+                    ExpandableCard(title = "Threshold: ${pkrItems[pkrState.selectedOption]}") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(MaterialTheme.colors.background).align(Alignment.Center),
+                        ) {
+                            Picker(
+                                modifier = Modifier.size(200.dp, 100.dp),
+                                state = pkrState,
+                                contentDescription = contentDescription,
+                                userScrollEnabled = pkrEnabled,
                             ) {
-                                Picker(
-                                    modifier = Modifier.size(400.dp, 100.dp),
-                                    state = pkrState,
-                                    contentDescription = contentDescription,
-                                    userScrollEnabled = pkrEnabled,
-                                ) {
-                                    Text(
-                                        text = pkrItems[it],
-                                        fontSize = 32.sp
-                                    )
-                                }
+                                Text(
+                                    text = pkrItems[it],
+                                    fontSize = 32.sp
+                                )
                             }
                         }
                     }
-
-                    item {
-                        ExpandableCard(title = "begin") {
-                            Text(
-                                modifier = Modifier
-                                    //.align(Alignment.Center)
-                                    .padding(top = 1.dp),
-                                text = "HIT.1"
-                            )
-                        }
-                    }
-
-                    item {
-                        ExpandableCard(title = "end") {
-                            Text(
-                                modifier = Modifier
-                                    //.align(Alignment.Center)
-                                    .padding(top = 1.dp),
-                                text = "HIT.2"
-                            )
-                        }
-                    }
-
-                    item {
-                        ExpandableCard(title = "vibration") {
-                            Text(
-                                modifier = Modifier
-                                    //.align(Alignment.Center)
-                                    .padding(top = 1.dp),
-                                text = "HIT.3"
-                            )
-                        }
-                    }
-                }
-                CompactButton(
-                    enabled = true,
-                    onClick = {
-                        btnChecked = !btnChecked
-
-                        if (btnChecked) { // pause
-                            pkrEnabled = true
-                            ctx?.stopService(mysvcIntent)
-                        } else { // play
-                            pkrEnabled = false;
-                            val threshold = pkrItems[pkrState.selectedOption].toDouble()
-                            mysvcIntent.putExtra("threshold", threshold)
-                            mysvcIntent.setAction("apply")
-
-                            ctx?.startForegroundService(mysvcIntent)
-                            //ctx?.startService(mysvcIntent)
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(top = 1.dp)
-                ) {
-                    Text("${btcap[if (btnChecked) 1 else 0]}")
                 }
 
-                /*ToggleButton(
-                    enabled = true,
-                    checked = btnChecked,
-                    onCheckedChange = {
-                        btnChecked = it
+                item {
+                    ExpandableCard(title = "begin") {
+                        TimePicker(timePickerStateBegin)
+                    }
+                }
 
-                        if (btnChecked) { // pause
-                            pkrEnabled = true
-                            ctx?.stopService(mysvcIntent)
-                        } else { // play
-                            pkrEnabled = false;
-                            val threshold = pkrItems[pkrState.selectedOption].toDouble()
-                            mysvcIntent.putExtra("threshold", threshold)
-                            mysvcIntent.setAction("apply")
+                item {
+                    ExpandableCard(title = "end") {
+                        TimePicker(timePickerStateEnd)
+                    }
+                }
 
-                            //ctx.startForegroundService(mysvcIntent)
-                            ctx?.startService(mysvcIntent)
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(top = 1.dp)
-                ) {
-                    Text("${btcap[if (btnChecked) 1 else 0]}")
-                }*/
-            //}
+                item {
+                    ExpandableCard(title = "vibration") {
+                        Text(
+                            modifier = Modifier
+                                //.align(Alignment.Center)
+                                .padding(top = 1.dp),
+                            text = "HIT.3"
+                        )
+                    }
+                }
+            }
+            CompactButton(
+                enabled = true,
+                onClick = {
+                    btnChecked = !btnChecked
+
+                    if (btnChecked) { // pause
+                        pkrEnabled = true
+                        ctx?.stopService(mysvcIntent)
+                    } else { // play
+                        pkrEnabled = false;
+                        val threshold = pkrItems[pkrState.selectedOption].toDouble()
+                        mysvcIntent.putExtra("threshold", threshold)
+                        mysvcIntent.setAction("apply")
+
+                        ctx?.startForegroundService(mysvcIntent)
+                        //ctx?.startService(mysvcIntent)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(top = 1.dp)
+            ) {
+                Text("${btcap[if (btnChecked) 1 else 0]}")
+            }
         }
     }
 }
