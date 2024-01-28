@@ -13,6 +13,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -25,7 +26,7 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.Picker
 import androidx.wear.compose.material.PickerState
-import androidx.wear.compose.material.ToggleButton
+import androidx.wear.compose.material.CompactButton
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -35,10 +36,17 @@ import androidx.compose.runtime.mutableStateOf
 import android.content.Intent
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+
 import com.example.phasig.MyService
 
 //import com.example.phasig.R
 import com.example.phasig.presentation.theme.PhasigTheme
+import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
 
 class MainActivity : ComponentActivity() {
@@ -84,6 +92,9 @@ fun WearApp(greetingName: String, ctx: Context?) {
     var btnChecked by remember { mutableStateOf(true) }
     val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
 
+    val listState = rememberScalingLazyListState()
+    var expandedState by remember { mutableStateOf(false) }
+
     if(ctx != null) {
         val activity = ctx as MainActivity
 
@@ -94,49 +105,130 @@ fun WearApp(greetingName: String, ctx: Context?) {
     PhasigTheme {
         Box(
                 modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colors.background),
+                    .fillMaxSize()
+                    .background(MaterialTheme.colors.background),
                 contentAlignment = Alignment.Center
         ) {
-            Text(
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
-                text = "Threshold: ${pkrItems[pkrState.selectedOption]}"
-            )
-            Picker(
-                modifier = Modifier.size(100.dp, 100.dp),
-                state = pkrState,
-                contentDescription = contentDescription,
-                userScrollEnabled = pkrEnabled,
-            ) {
-                Text(pkrItems[it])
-            }
-
-            ToggleButton(
-                enabled = true,
-                checked = btnChecked,
-                onCheckedChange = {
-                    btnChecked = it
-
-                    if (btnChecked)
-                    { // pause
-                        pkrEnabled = true
-                        ctx?.stopService(mysvcIntent)
+            /*Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colors.background),
+                contentAlignment = Alignment.Center
+            ) {*/
+                ScalingLazyColumn(
+                    //contentPadding = PaddingValues(top = 1.dp),
+                    state = listState,
+                    modifier = Modifier
+                        //.align(Alignment.TopCenter)
+                        .padding(top = 1.dp)
+                        .fillMaxWidth()
+                ) {
+                    item {
+                        ExpandableCard(title = "Threshold: ${pkrItems[pkrState.selectedOption]}") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colors.background).align(Alignment.Center),
+                            ) {
+                                Picker(
+                                    modifier = Modifier.size(400.dp, 100.dp),
+                                    state = pkrState,
+                                    contentDescription = contentDescription,
+                                    userScrollEnabled = pkrEnabled,
+                                ) {
+                                    Text(
+                                        text = pkrItems[it],
+                                        fontSize = 32.sp
+                                    )
+                                }
+                            }
+                        }
                     }
-                    else
-                    { // play
-                        pkrEnabled = false;
-                        val threshold = pkrItems[pkrState.selectedOption].toDouble()
-                        mysvcIntent.putExtra("threshold", threshold)
-                        mysvcIntent.setAction("apply")
 
-                        //ctx.startForegroundService(mysvcIntent)
-                        ctx?.startService(mysvcIntent)
+                    item {
+                        ExpandableCard(title = "begin") {
+                            Text(
+                                modifier = Modifier
+                                    //.align(Alignment.Center)
+                                    .padding(top = 1.dp),
+                                text = "HIT.1"
+                            )
+                        }
                     }
-                },
-                modifier = Modifier.align(Alignment.BottomCenter).padding(top = 10.dp)
-            ) {
-                Text("${btcap[if(btnChecked) 1 else 0]}")
-            }
+
+                    item {
+                        ExpandableCard(title = "end") {
+                            Text(
+                                modifier = Modifier
+                                    //.align(Alignment.Center)
+                                    .padding(top = 1.dp),
+                                text = "HIT.2"
+                            )
+                        }
+                    }
+
+                    item {
+                        ExpandableCard(title = "vibration") {
+                            Text(
+                                modifier = Modifier
+                                    //.align(Alignment.Center)
+                                    .padding(top = 1.dp),
+                                text = "HIT.3"
+                            )
+                        }
+                    }
+                }
+                CompactButton(
+                    enabled = true,
+                    onClick = {
+                        btnChecked = !btnChecked
+
+                        if (btnChecked) { // pause
+                            pkrEnabled = true
+                            ctx?.stopService(mysvcIntent)
+                        } else { // play
+                            pkrEnabled = false;
+                            val threshold = pkrItems[pkrState.selectedOption].toDouble()
+                            mysvcIntent.putExtra("threshold", threshold)
+                            mysvcIntent.setAction("apply")
+
+                            ctx?.startForegroundService(mysvcIntent)
+                            //ctx?.startService(mysvcIntent)
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(top = 1.dp)
+                ) {
+                    Text("${btcap[if (btnChecked) 1 else 0]}")
+                }
+
+                /*ToggleButton(
+                    enabled = true,
+                    checked = btnChecked,
+                    onCheckedChange = {
+                        btnChecked = it
+
+                        if (btnChecked) { // pause
+                            pkrEnabled = true
+                            ctx?.stopService(mysvcIntent)
+                        } else { // play
+                            pkrEnabled = false;
+                            val threshold = pkrItems[pkrState.selectedOption].toDouble()
+                            mysvcIntent.putExtra("threshold", threshold)
+                            mysvcIntent.setAction("apply")
+
+                            //ctx.startForegroundService(mysvcIntent)
+                            ctx?.startService(mysvcIntent)
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(top = 1.dp)
+                ) {
+                    Text("${btcap[if (btnChecked) 1 else 0]}")
+                }*/
+            //}
         }
     }
 }
