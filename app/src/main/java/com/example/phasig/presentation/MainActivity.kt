@@ -7,6 +7,7 @@
 package com.example.phasig.presentation
 
 import android.os.Bundle
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -49,6 +50,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.wear.compose.material.Checkbox
+import androidx.wear.compose.material.ToggleChip
 
 import com.example.phasig.MyService
 
@@ -131,6 +134,8 @@ fun WearApp(greetingName: String, ctx: Context?) {
     val listState = rememberScalingLazyListState()
     var expandedState by remember { mutableStateOf(false) }
     // begin
+    var tpkrBegEnabled by remember { mutableStateOf(false) }
+    var tpkrEndEnabled by remember { mutableStateOf(false) }
     @Composable
     fun rememberTimePickerState(
         initiallySelectedOptionH: Int,
@@ -246,16 +251,43 @@ fun WearApp(greetingName: String, ctx: Context?) {
 
                 item {
                     ExpandableCard(title = "begin at " +
-                        "%02d:".format(timePickerStateBegin.hourState.selectedOption) +
-                        "%02d".format(timePickerStateBegin.minuteState.selectedOption)) {
-                        TimePicker(timePickerStateBegin)
+                        if(tpkrBegEnabled) {
+                            "%02d:".format(timePickerStateBegin.hourState.selectedOption) +
+                            "%02d".format(timePickerStateBegin.minuteState.selectedOption)
+                        } else
+                        {
+                            "now"
+                        }
+                    ) {
+                        Column()
+                        {
+                            Row()
+                            {
+                                Text("Use time:")
+                                Checkbox(
+                                    checked = tpkrBegEnabled,
+                                    enabled = true,
+                                    onCheckedChange = { tpkrBegEnabled = it }
+                                )
+                            }
+
+                            if(tpkrBegEnabled) {
+                                TimePicker(timePickerStateBegin)
+                            }
+                        }
                     }
                 }
 
                 item {
                     ExpandableCard(title = "end at " +
-                        "%02d:".format(timePickerStateEnd.hourState.selectedOption) +
-                        "%02d".format(timePickerStateEnd.minuteState.selectedOption)) {
+                        if(tpkrEndEnabled) {
+                            "%02d:".format(timePickerStateEnd.hourState.selectedOption) +
+                            "%02d".format(timePickerStateEnd.minuteState.selectedOption)
+                        } else
+                        {
+                            "never"
+                        }
+                    ) {
                         TimePicker(timePickerStateEnd)
                     }
                 }
@@ -284,6 +316,8 @@ fun WearApp(greetingName: String, ctx: Context?) {
                         val threshold = pkrItems[pkrState.selectedOption].toDouble()
                         mysvcIntent.putExtra("threshold", threshold)
                         mysvcIntent.setAction("apply")
+
+                        //timePickerStateBegin!!.hourState.selectedOption
 
                         ctx?.startForegroundService(mysvcIntent)
                         //ctx?.startService(mysvcIntent)
