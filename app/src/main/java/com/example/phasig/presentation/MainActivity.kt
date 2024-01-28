@@ -57,9 +57,32 @@ import com.example.phasig.presentation.theme.PhasigTheme
 import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
 
+class TimePickerState(
+    initiallySelectedOptionH: Int = 0,
+    initiallySelectedOptionM: Int = 0
+) {
+    val hourState: PickerState
+    val minuteState: PickerState
+    var selectedColumn by mutableStateOf(0)
+
+    init
+    {
+        hourState = PickerState(
+            initialNumberOfOptions = 24,
+            initiallySelectedOption = initiallySelectedOptionH
+        )
+        minuteState = PickerState(
+            initialNumberOfOptions = 60,
+            initiallySelectedOption = initiallySelectedOptionM
+        )
+    }
+}
+
 class MainActivity : ComponentActivity() {
     var sharedPref: SharedPreferences ?= null
-    var pkrState : PickerState ?= null
+    var pkrState: PickerState ?= null
+    var timePickerStateBegin: TimePickerState ?= null
+    var timePickerStateEnd: TimePickerState ?= null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -80,6 +103,10 @@ class MainActivity : ComponentActivity() {
         with(sharedPref!!.edit())
         {
             putInt("pkrIdx", pkrState!!.selectedOption)
+            putInt("tpkrBegH", timePickerStateBegin!!.hourState.selectedOption)
+            putInt("tpkrBegM", timePickerStateBegin!!.minuteState.selectedOption)
+            putInt("tpkrEndH", timePickerStateEnd!!.hourState.selectedOption)
+            putInt("tpkrEndM", timePickerStateEnd!!.minuteState.selectedOption)
             apply()
         }
         super.onPause();
@@ -104,41 +131,28 @@ fun WearApp(greetingName: String, ctx: Context?) {
     val listState = rememberScalingLazyListState()
     var expandedState by remember { mutableStateOf(false) }
     // begin
-    class TimePickerState(
-        initiallySelectedOptionH: Int = 0,
-        initiallySelectedOptionM: Int = 0
-    ) {
-        val hourState: PickerState
-        val minuteState: PickerState
-        var selectedColumn by mutableStateOf(0)
-
-        init
-        {
-            hourState = PickerState(
-                initialNumberOfOptions = 24,
-                initiallySelectedOption = initiallySelectedOptionH
-            )
-            minuteState = PickerState(
-                initialNumberOfOptions = 60,
-                initiallySelectedOption = initiallySelectedOptionM
-            )
-        }
-    }
-
     @Composable
     fun rememberTimePickerState(
         initiallySelectedOptionH: Int,
         initiallySelectedOptionM: Int
     ) = remember { TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM) }
 
-    var timePickerStateBegin = rememberTimePickerState(4, 0)
-    var timePickerStateEnd = rememberTimePickerState(7, 0)
+    var timePickerStateBegin = rememberTimePickerState(
+        sharedPref?.getInt("tpkrBegH", 4) ?: 4,
+        sharedPref?.getInt("tpkrBegM", 0) ?: 0,
+    )
+    var timePickerStateEnd = rememberTimePickerState(
+        sharedPref?.getInt("tpkrEndH", 7) ?: 7,
+        sharedPref?.getInt("tpkrEndM", 0) ?: 0,
+    )
 
     if(ctx != null) {
         val activity = ctx as MainActivity
 
         activity.sharedPref = sharedPref
         activity.pkrState = pkrState
+        activity.timePickerStateBegin = timePickerStateBegin
+        activity.timePickerStateEnd = timePickerStateEnd
     }
 
     PhasigTheme {
