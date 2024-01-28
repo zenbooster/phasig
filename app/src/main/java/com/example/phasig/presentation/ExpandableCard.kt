@@ -29,6 +29,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -84,7 +85,7 @@ fun ExpandableCard(
             .fillMaxWidth()
             .wrapContentHeight()
             //.padding(start = 12.dp, end = 12.dp, top = 4.dp)
-            .padding(start = 1.dp, end = 1.dp, top = 4.dp)
+            .padding(start = 1.dp, end = 1.dp, top = 1.dp)
             .animateContentSize(
                 animationSpec = tween(
                     durationMillis = 300,
@@ -131,7 +132,9 @@ fun ExpandableCard(
                 }*/
             //}
             if (expandedState) {
-                content()
+                Box(modifier = Modifier.padding(top = 10.dp)) {
+                    content()
+                }
             }
         }
     }

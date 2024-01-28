@@ -169,7 +169,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                 }
 
                 Row(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
@@ -210,17 +210,18 @@ fun WearApp(greetingName: String, ctx: Context?) {
                 item {
                     ExpandableCard(title = "Threshold: ${pkrItems[pkrState.selectedOption]}") {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colors.background).align(Alignment.Center),
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
                         ) {
                             Picker(
-                                modifier = Modifier.size(200.dp, 100.dp),
+                                modifier = Modifier.size(64.dp, 100.dp),
                                 state = pkrState,
                                 contentDescription = contentDescription,
                                 userScrollEnabled = pkrEnabled,
                             ) {
                                 Text(
+                                    //text = "%02d".format(pkrItems[it]),
                                     text = pkrItems[it],
                                     fontSize = 32.sp
                                 )
