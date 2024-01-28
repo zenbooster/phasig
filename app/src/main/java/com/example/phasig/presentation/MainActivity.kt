@@ -230,13 +230,17 @@ fun WearApp(greetingName: String, ctx: Context?) {
                 }
 
                 item {
-                    ExpandableCard(title = "begin") {
+                    ExpandableCard(title = "begin at " +
+                        "%02d:".format(timePickerStateBegin.hourState.selectedOption) +
+                        "%02d".format(timePickerStateBegin.minuteState.selectedOption)) {
                         TimePicker(timePickerStateBegin)
                     }
                 }
 
                 item {
-                    ExpandableCard(title = "end") {
+                    ExpandableCard(title = "end at " +
+                        "%02d:".format(timePickerStateEnd.hourState.selectedOption) +
+                        "%02d".format(timePickerStateEnd.minuteState.selectedOption)) {
                         TimePicker(timePickerStateEnd)
                     }
                 }
