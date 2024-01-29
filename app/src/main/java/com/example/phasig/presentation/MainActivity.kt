@@ -129,7 +129,7 @@ class MainActivity : ComponentActivity() {
 
             putInt("tpkrEndH", optionalTimePickerStateEnd!!.timePickerState.hourState.selectedOption)
             putInt("tpkrEndM", optionalTimePickerStateEnd!!.timePickerState.minuteState.selectedOption)
-            putBoolean("tpkrEndEnabled", optionalTimePickerStateBegin!!.tpkrEnabled)
+            putBoolean("tpkrEndEnabled", optionalTimePickerStateEnd!!.tpkrEnabled)
             apply()
         }
         super.onPause();
