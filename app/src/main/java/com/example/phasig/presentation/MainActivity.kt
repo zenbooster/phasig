@@ -499,7 +499,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                     mysvcIntent.putExtra("islrVibrationLevel", islrVibrationLevel)
                                     mysvcIntent.putExtra(
                                         "islrVibrationDuration",
-                                        islrVibrationLevel
+                                        islrVibrationDuration
                                     )
                                     mysvcIntent.setAction("apply")
 
