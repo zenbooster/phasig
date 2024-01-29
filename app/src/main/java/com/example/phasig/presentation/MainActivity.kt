@@ -29,6 +29,7 @@ import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.Picker
 import androidx.wear.compose.material.PickerState
 import androidx.wear.compose.material.CompactButton
+import androidx.wear.compose.material.Button
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -39,6 +40,7 @@ import android.content.Intent
 import android.content.Context
 import android.content.SharedPreferences
 import android.view.MotionEvent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
@@ -49,6 +51,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.wear.compose.material.Checkbox
@@ -60,13 +63,18 @@ import java.util.Calendar
 import androidx.wear.compose.material.InlineSlider
 import androidx.wear.compose.material.InlineSliderDefaults
 
+import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
+import androidx.wear.compose.material.PageIndicatorState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.wear.compose.material.HorizontalPageIndicator
+import androidx.compose.ui.graphics.Color
+
 import com.example.phasig.MyService
 
 //import com.example.phasig.R
 import com.example.phasig.presentation.theme.PhasigTheme
 import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
-import java.util.Objects
 
 class TimePickerState(
     initiallySelectedOptionH: Int = 0,
@@ -100,7 +108,6 @@ class OptionalTimePickerState(
 
     init {
         timePickerState = TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM)
-        //tpkrEnabled = initialEnabled
     }
 }
 
@@ -148,10 +155,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun WearApp(greetingName: String, ctx: Context?) {
-    //val ctx = LocalContext.current
     val sharedPref = ctx?.getSharedPreferences("myPref", Context.MODE_PRIVATE) ?: null
     val btcap = listOf("❚❚", "▶")
     val df = DecimalFormat("#.##")
@@ -205,274 +211,366 @@ fun WearApp(greetingName: String, ctx: Context?) {
     }
 
     PhasigTheme {
+        val state = rememberSwipeToDismissBoxState()
+
+        val maxPages = 2
+        var selectedPage by remember { mutableStateOf(0) }
+
+        val pagerState = rememberPagerState(pageCount = { maxPages })
+
+        val pageIndicatorState: PageIndicatorState = remember {
+            object : PageIndicatorState {
+                override val pageOffset: Float
+                    get() = 0f
+                override val selectedPage: Int
+                    get() = selectedPage
+                override val pageCount: Int
+                    get() = maxPages
+            }
+        }
+
         Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colors.background),
-                contentAlignment = Alignment.Center
+            modifier = Modifier
+                .fillMaxSize()
+                //.edgeSwipeToDismiss(state)
         ) {
-            @Composable
-            fun TimePicker(timePickerState: TimePickerState)
-            {
-                val textStyle = MaterialTheme.typography.display1
+            HorizontalPager(state = pagerState) { page ->
+                selectedPage = pagerState.currentPage
 
-                @Composable
-                fun TP_Option(column: Int, text: String) = Box(modifier = Modifier.fillMaxSize()) {
-                    Text(
-                        text = text, style = textStyle,
-                        color = if (timePickerState.selectedColumn == column) MaterialTheme.colors.secondary
-                        else MaterialTheme.colors.onBackground,
+                if (selectedPage == 1) {
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.Center).wrapContentSize()
-                            .pointerInteropFilter {
-                                if (it.action == MotionEvent.ACTION_DOWN) timePickerState.selectedColumn = column
-                                true
-                            }
+                            .fillMaxSize()
+                            .background(MaterialTheme.colors.background)
                     )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    val hourContentDescription by remember {
-                        derivedStateOf { "${timePickerState.hourState.selectedOption + 1 } hours" }
-                    }
-                    Picker(
-                        readOnly = timePickerState.selectedColumn != 0,
-                        state = timePickerState.hourState,
-                        modifier = Modifier.size(64.dp, 100.dp),
-                        contentDescription = hourContentDescription,
-                        option = { hour: Int -> TP_Option(0, "%2d".format(hour)) }
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(text = ":", style = textStyle, color = MaterialTheme.colors.onBackground)
-                    Spacer(Modifier.width(8.dp))
-
-                    val minuteContentDescription by remember {
-                        derivedStateOf { "${timePickerState.minuteState.selectedOption} minutes" }
-                    }
-                    Picker(
-                        readOnly = timePickerState.selectedColumn != 1,
-                        state = timePickerState.minuteState,
-                        modifier = Modifier.size(64.dp, 100.dp),
-                        contentDescription = minuteContentDescription,
-                        option = { minute: Int -> TP_Option(1, "%02d".format(minute)) }
-                    )
-                }
-            }
-
-            @Composable
-            fun OptionalTimePicker(label: String, optionalTimePickerState : OptionalTimePickerState)
-            {
-                Column()
-                {
-                    Row()
                     {
-                        Text(label)
-                        Checkbox(
-                            checked = optionalTimePickerState.tpkrEnabled,
-                            enabled = true,
-                            onCheckedChange = { optionalTimePickerState.tpkrEnabled = it }
-                        )
-                    }
+                        @Composable
+                        fun TimePicker(timePickerState: TimePickerState) {
+                            val textStyle = MaterialTheme.typography.display1
 
-                    if(optionalTimePickerState.tpkrEnabled) {
-                        TimePicker(optionalTimePickerState.timePickerState)
-                    }
-                }
-            }
+                            @Composable
+                            fun TP_Option(column: Int, text: String) =
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    Text(
+                                        text = text, style = textStyle,
+                                        color = if (timePickerState.selectedColumn == column) MaterialTheme.colors.secondary
+                                        else MaterialTheme.colors.onBackground,
+                                        modifier = Modifier
+                                            .align(Alignment.Center).wrapContentSize()
+                                            .pointerInteropFilter {
+                                                if (it.action == MotionEvent.ACTION_DOWN) timePickerState.selectedColumn =
+                                                    column
+                                                true
+                                            }
+                                    )
+                                }
 
-            ScalingLazyColumn(
-                //contentPadding = PaddingValues(top = 1.dp),
-                state = listState,
-                modifier = Modifier
-                    .padding(top = 1.dp)
-                    .fillMaxWidth()
-            ) {
-                item {
-                    ExpandableCard(title = "Threshold: ${pkrItems[pkrState.selectedOption]}") {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            Picker(
-                                modifier = Modifier.size(64.dp, 100.dp),
-                                state = pkrState,
-                                contentDescription = contentDescription,
-                                userScrollEnabled = pkrEnabled,
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
                             ) {
+                                val hourContentDescription by remember {
+                                    derivedStateOf { "${timePickerState.hourState.selectedOption + 1} hours" }
+                                }
+                                Picker(
+                                    readOnly = timePickerState.selectedColumn != 0,
+                                    state = timePickerState.hourState,
+                                    modifier = Modifier.size(64.dp, 100.dp),
+                                    contentDescription = hourContentDescription,
+                                    option = { hour: Int ->
+                                        TP_Option(
+                                            0,
+                                            "%2d".format(hour)
+                                        )
+                                    }
+                                )
+                                Spacer(Modifier.width(8.dp))
                                 Text(
-                                    //text = "%02d".format(pkrItems[it]),
-                                    text = pkrItems[it],
-                                    fontSize = 32.sp
+                                    text = ":",
+                                    style = textStyle,
+                                    color = MaterialTheme.colors.onBackground
                                 )
+                                Spacer(Modifier.width(8.dp))
+
+                                val minuteContentDescription by remember {
+                                    derivedStateOf { "${timePickerState.minuteState.selectedOption} minutes" }
+                                }
+                                Picker(
+                                    readOnly = timePickerState.selectedColumn != 1,
+                                    state = timePickerState.minuteState,
+                                    modifier = Modifier.size(64.dp, 100.dp),
+                                    contentDescription = minuteContentDescription,
+                                    option = { minute: Int ->
+                                        TP_Option(
+                                            1,
+                                            "%02d".format(minute)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
+                        @Composable
+                        fun OptionalTimePicker(
+                            label: String,
+                            optionalTimePickerState: OptionalTimePickerState
+                        ) {
+                            Column()
+                            {
+                                Row()
+                                {
+                                    Text(label)
+                                    Checkbox(
+                                        checked = optionalTimePickerState.tpkrEnabled,
+                                        enabled = true,
+                                        onCheckedChange = {
+                                            optionalTimePickerState.tpkrEnabled = it
+                                        }
+                                    )
+                                }
+
+                                if (optionalTimePickerState.tpkrEnabled) {
+                                    TimePicker(optionalTimePickerState.timePickerState)
+                                }
+                            }
+                        }
+
+                        ScalingLazyColumn(
+                            //contentPadding = PaddingValues(top = 1.dp),
+                            state = listState,
+                            modifier = Modifier
+                                .padding(top = 1.dp)
+                                .fillMaxWidth()
+                        ) {
+                            item {
+                                ExpandableCard(title = "Threshold: ${pkrItems[pkrState.selectedOption]}") {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        Picker(
+                                            modifier = Modifier.size(64.dp, 100.dp),
+                                            state = pkrState,
+                                            contentDescription = contentDescription,
+                                            userScrollEnabled = pkrEnabled,
+                                        ) {
+                                            Text(
+                                                //text = "%02d".format(pkrItems[it]),
+                                                text = pkrItems[it],
+                                                fontSize = 32.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            item {
+                                with(optionalTimePickerStateBegin) {
+                                    ExpandableCard(
+                                        title = "begin at " +
+                                                if (tpkrEnabled) {
+                                                    "%02d:".format(timePickerState.hourState.selectedOption) +
+                                                            "%02d".format(timePickerState.minuteState.selectedOption)
+                                                } else {
+                                                    "now"
+                                                }
+                                    ) {
+                                        OptionalTimePicker(
+                                            "Use time:",
+                                            optionalTimePickerStateBegin
+                                        )
+                                    }
+                                }
+                            }
+
+                            item {
+                                with(optionalTimePickerStateEnd) {
+                                    ExpandableCard(
+                                        title = "end at " +
+                                                if (tpkrEnabled) {
+                                                    "%02d:".format(timePickerState.hourState.selectedOption) +
+                                                            "%02d".format(timePickerState.minuteState.selectedOption)
+                                                } else {
+                                                    "never"
+                                                }
+                                    ) {
+                                        OptionalTimePicker(
+                                            "Use time:",
+                                            optionalTimePickerStateEnd
+                                        )
+                                    }
+                                }
+                            }
+
+                            item {
+                                ExpandableCard(title = "vibration") {
+                                    Column() {
+                                        Text(
+                                            modifier = Modifier
+                                                //.align(Alignment.Center)
+                                                .padding(top = 1.dp),
+                                            text = "Level:"
+                                        )
+
+                                        InlineSlider(
+                                            value = islrVibrationLevel.toFloat(),
+                                            onValueChange = {
+                                                islrVibrationLevel = it.toInt()
+                                            },
+                                            increaseIcon = {
+                                                Icon(
+                                                    InlineSliderDefaults.Increase,
+                                                    "Increase"
+                                                )
+                                            },
+                                            decreaseIcon = {
+                                                Icon(
+                                                    InlineSliderDefaults.Decrease,
+                                                    "Decrease"
+                                                )
+                                            },
+                                            valueRange = 0f..255.0f,
+                                            steps = 8,
+                                            segmented = true
+                                        )
+
+                                        Text(
+                                            modifier = Modifier
+                                                //.align(Alignment.Center)
+                                                .padding(top = 1.dp),
+                                            text = "Duration:"
+                                        )
+
+                                        InlineSlider(
+                                            value = islrVibrationDuration.toFloat(),
+                                            onValueChange = {
+                                                islrVibrationDuration = it.toLong()
+                                            },
+                                            increaseIcon = {
+                                                Icon(
+                                                    InlineSliderDefaults.Increase,
+                                                    "Increase"
+                                                )
+                                            },
+                                            decreaseIcon = {
+                                                Icon(
+                                                    InlineSliderDefaults.Decrease,
+                                                    "Decrease"
+                                                )
+                                            },
+                                            valueRange = 0f..1000.0f,
+                                            steps = 8,
+                                            segmented = true
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
-                item {
-                    with(optionalTimePickerStateBegin) {
-                        ExpandableCard(
-                            title = "begin at " +
-                                    if (tpkrEnabled) {
-                                        "%02d:".format(timePickerState.hourState.selectedOption) +
-                                                "%02d".format(timePickerState.minuteState.selectedOption)
-                                    } else {
-                                        "now"
+                if(selectedPage == 0) {
+                    Box(modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colors.background)) {
+                        Button(
+                            enabled = true,
+                            onClick = {
+                                val tokenSFS = 0
+                                val tokenSS = 1
+
+                                btnChecked = !btnChecked
+
+                                if (btnChecked) { // pause
+                                    Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
+                                        tokenSS
+                                    );
+                                    Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
+                                        tokenSFS
+                                    );
+                                    pkrEnabled = true
+                                    ctx?.stopService(mysvcIntent)
+                                } else { // play
+                                    pkrEnabled = false;
+                                    val threshold = pkrItems[pkrState.selectedOption].toDouble()
+                                    mysvcIntent.putExtra("threshold", threshold)
+                                    mysvcIntent.putExtra("islrVibrationLevel", islrVibrationLevel)
+                                    mysvcIntent.putExtra(
+                                        "islrVibrationDuration",
+                                        islrVibrationLevel
+                                    )
+                                    mysvcIntent.setAction("apply")
+
+                                    fun GetDelayMsecFromNow(h: Int, m: Int): Long {
+                                        val cal = GregorianCalendar()
+                                        val om = (cal[Calendar.HOUR] * 60) + cal[Calendar.MINUTE]
+                                        var nm = (h * 60) + m
+
+                                        if (nm < om) {
+                                            nm += 24 * 60
+                                        }
+
+                                        val delayMsec =
+                                            ((nm - om) * 60 - cal[Calendar.SECOND]) * 1000
+
+                                        return delayMsec.toLong()
                                     }
-                        ) {
-                            OptionalTimePicker("Use time:", optionalTimePickerStateBegin)
-                        }
-                    }
-                }
 
-                item {
-                    with(optionalTimePickerStateEnd) {
-                        ExpandableCard(
-                            title = "end at " +
-                                    if (tpkrEnabled) {
-                                        "%02d:".format(timePickerState.hourState.selectedOption) +
-                                                "%02d".format(timePickerState.minuteState.selectedOption)
-                                    } else {
-                                        "never"
+                                    with(optionalTimePickerStateBegin!!)
+                                    {
+                                        if (tpkrEnabled) {
+                                            Handler(Looper.getMainLooper()).postDelayed(
+                                                {
+                                                    //Do something at begin time
+                                                    ctx?.startForegroundService(mysvcIntent)
+                                                },
+                                                tokenSFS,
+                                                GetDelayMsecFromNow(
+                                                    timePickerState.hourState.selectedOption,
+                                                    timePickerState.minuteState.selectedOption
+                                                )
+                                            )
+                                        } else {
+                                            ctx?.startForegroundService(mysvcIntent)
+                                        }
                                     }
+
+                                    with(optionalTimePickerStateEnd!!)
+                                    {
+                                        if (tpkrEnabled) {
+                                            Handler(Looper.getMainLooper()).postDelayed(
+                                                {
+                                                    //Do something at end time
+                                                    btnChecked = !btnChecked
+                                                    pkrEnabled = true
+                                                    ctx?.stopService(mysvcIntent)
+                                                },
+                                                tokenSS,
+                                                GetDelayMsecFromNow(
+                                                    timePickerState.hourState.selectedOption,
+                                                    timePickerState.minuteState.selectedOption
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(top = 1.dp)
                         ) {
-                            OptionalTimePicker("Use time:", optionalTimePickerStateEnd)
-                        }
-                    }
-                }
-
-                item {
-                    ExpandableCard(title = "vibration") {
-                        Column() {
-                            Text(
-                                modifier = Modifier
-                                    //.align(Alignment.Center)
-                                    .padding(top = 1.dp),
-                                text = "Level:"
-                            )
-
-                            InlineSlider(
-                                value = islrVibrationLevel.toFloat(),
-                                onValueChange = { islrVibrationLevel = it.toInt() },
-                                increaseIcon = { Icon(InlineSliderDefaults.Increase, "Increase") },
-                                decreaseIcon = { Icon(InlineSliderDefaults.Decrease, "Decrease") },
-                                valueRange = 0f..255.0f,
-                                steps = 8,
-                                segmented = true
-                            )
-
-                            Text(
-                                modifier = Modifier
-                                    //.align(Alignment.Center)
-                                    .padding(top = 1.dp),
-                                text = "Duration:"
-                            )
-
-                            InlineSlider(
-                                value = islrVibrationDuration.toFloat(),
-                                onValueChange = { islrVibrationDuration = it.toLong() },
-                                increaseIcon = { Icon(InlineSliderDefaults.Increase, "Increase") },
-                                decreaseIcon = { Icon(InlineSliderDefaults.Decrease, "Decrease") },
-                                valueRange = 0f..1000.0f,
-                                steps = 8,
-                                segmented = true
-                            )
+                            Text("${btcap[if (btnChecked) 1 else 0]}")
                         }
                     }
                 }
             }
-            CompactButton(
-                enabled = true,
-                onClick = {
-                    val tokenSFS = 0
-                    val tokenSS = 1
 
-                    btnChecked = !btnChecked
-
-                    if (btnChecked) { // pause
-                        Handler(Looper.getMainLooper()).removeCallbacksAndMessages(tokenSS);
-                        Handler(Looper.getMainLooper()).removeCallbacksAndMessages(tokenSFS);
-                        pkrEnabled = true
-                        ctx?.stopService(mysvcIntent)
-                    } else { // play
-                        pkrEnabled = false;
-                        val threshold = pkrItems[pkrState.selectedOption].toDouble()
-                        mysvcIntent.putExtra("threshold", threshold)
-                        mysvcIntent.putExtra("islrVibrationLevel", islrVibrationLevel)
-                        mysvcIntent.putExtra("islrVibrationDuration", islrVibrationLevel)
-                        mysvcIntent.setAction("apply")
-
-                        fun GetDelayMsecFromNow(h: Int, m: Int): Long
-                        {
-                            val cal = GregorianCalendar()
-                            val om = (cal[Calendar.HOUR] * 60) + cal[Calendar.MINUTE]
-                            var nm = (h * 60) + m
-
-                            if (nm < om) {
-                                nm += 24 * 60
-                            }
-
-                            val delayMsec = ((nm - om) * 60 - cal[Calendar.SECOND]) * 1000
-
-                            return delayMsec.toLong()
-                        }
-
-                        with(optionalTimePickerStateBegin!!)
-                        {
-                            if (tpkrEnabled)
-                            {
-                                Handler(Looper.getMainLooper()).postDelayed(
-                                    {
-                                        //Do something at begin time
-                                        ctx?.startForegroundService(mysvcIntent)
-                                    },
-                                    tokenSFS,
-                                    GetDelayMsecFromNow(
-                                        timePickerState.hourState.selectedOption,
-                                        timePickerState.minuteState.selectedOption
-                                    )
-                                )
-                            }
-                            else
-                            {
-                                ctx?.startForegroundService(mysvcIntent)
-                            }
-                        }
-
-                        with(optionalTimePickerStateEnd!!)
-                        {
-                            if (tpkrEnabled)
-                            {
-                                Handler(Looper.getMainLooper()).postDelayed(
-                                    {
-                                        //Do something at end time
-                                        btnChecked = !btnChecked
-                                        pkrEnabled = true
-                                        ctx?.stopService(mysvcIntent)
-                                    },
-                                    tokenSS,
-                                    GetDelayMsecFromNow(
-                                        timePickerState.hourState.selectedOption,
-                                        timePickerState.minuteState.selectedOption
-                                    )
-                                )
-                            }
-                        }
-
-                        //ctx?.startForegroundService(mysvcIntent)
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(top = 1.dp)
-            ) {
-                Text("${btcap[if (btnChecked) 1 else 0]}")
-            }
+            HorizontalPageIndicator(
+                pageIndicatorState = pageIndicatorState,
+                selectedColor = Color(0xFFc75f00)
+            )
         }
     }
 }
