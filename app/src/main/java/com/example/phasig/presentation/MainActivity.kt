@@ -52,9 +52,13 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.wear.compose.material.Checkbox
+import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.ToggleChip
 import java.util.GregorianCalendar
 import java.util.Calendar
+
+import androidx.wear.compose.material.InlineSlider
+import androidx.wear.compose.material.InlineSliderDefaults
 
 import com.example.phasig.MyService
 
@@ -105,6 +109,8 @@ class MainActivity : ComponentActivity() {
     var pkrState: PickerState ?= null
     var optionalTimePickerStateBegin: OptionalTimePickerState ?= null
     var optionalTimePickerStateEnd: OptionalTimePickerState ?= null
+    var islrVibrationLevel: Int by mutableStateOf(0)
+    var islrVibrationDuration: Long by mutableStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -133,6 +139,9 @@ class MainActivity : ComponentActivity() {
             putInt("tpkrEndH", optionalTimePickerStateEnd!!.timePickerState.hourState.selectedOption)
             putInt("tpkrEndM", optionalTimePickerStateEnd!!.timePickerState.minuteState.selectedOption)
             putBoolean("tpkrEndEnabled", optionalTimePickerStateEnd!!.tpkrEnabled)
+
+            putInt("islrVibrationLevel", islrVibrationLevel)
+            putLong("islrVibrationDuration", islrVibrationDuration)
             apply()
         }
         super.onPause();
@@ -171,15 +180,18 @@ fun WearApp(greetingName: String, ctx: Context?) {
     ) = remember { OptionalTimePickerState(initiallySelectedOptionH, initiallySelectedOptionM, initialEnabled) }
 
     var optionalTimePickerStateBegin = rememberOptionalTimePickerState(
-        sharedPref?.getInt("tpkrBegH", 4) ?: 4,
-        sharedPref?.getInt("tpkrBegM", 0) ?: 0,
-        sharedPref?.getBoolean("tpkrBegEnabled", false) ?: false
+        sharedPref!!.getInt("tpkrBegH", 4),
+        sharedPref!!.getInt("tpkrBegM", 0),
+        sharedPref!!.getBoolean("tpkrBegEnabled", false)
     )
     var optionalTimePickerStateEnd = rememberOptionalTimePickerState(
-        sharedPref?.getInt("tpkrEndH", 7) ?: 7,
-        sharedPref?.getInt("tpkrEndM", 0) ?: 0,
-        sharedPref?.getBoolean("tpkrEndEnabled", false) ?: false
+        sharedPref!!.getInt("tpkrEndH", 7),
+        sharedPref!!.getInt("tpkrEndM", 0),
+        sharedPref!!.getBoolean("tpkrEndEnabled", false)
     )
+
+    var islrVibrationLevel by remember { mutableStateOf(sharedPref!!.getInt("islrVibrationLevel", 255)) }
+    var islrVibrationDuration by remember { mutableStateOf(sharedPref.getLong("islrVibrationDuration", 375)) }
 
     if(ctx != null) {
         val activity = ctx as MainActivity
@@ -188,6 +200,8 @@ fun WearApp(greetingName: String, ctx: Context?) {
         activity.pkrState = pkrState
         activity.optionalTimePickerStateBegin = optionalTimePickerStateBegin
         activity.optionalTimePickerStateEnd = optionalTimePickerStateEnd
+        activity.islrVibrationLevel = islrVibrationLevel
+        activity.islrVibrationDuration = islrVibrationDuration
     }
 
     PhasigTheme {
@@ -334,12 +348,41 @@ fun WearApp(greetingName: String, ctx: Context?) {
 
                 item {
                     ExpandableCard(title = "vibration") {
-                        Text(
-                            modifier = Modifier
-                                //.align(Alignment.Center)
-                                .padding(top = 1.dp),
-                            text = "HIT.3"
-                        )
+                        Column() {
+                            Text(
+                                modifier = Modifier
+                                    //.align(Alignment.Center)
+                                    .padding(top = 1.dp),
+                                text = "Level:"
+                            )
+
+                            InlineSlider(
+                                value = islrVibrationLevel.toFloat(),
+                                onValueChange = { islrVibrationLevel = it.toInt() },
+                                increaseIcon = { Icon(InlineSliderDefaults.Increase, "Increase") },
+                                decreaseIcon = { Icon(InlineSliderDefaults.Decrease, "Decrease") },
+                                valueRange = 0f..255.0f,
+                                steps = 8,
+                                segmented = true
+                            )
+
+                            Text(
+                                modifier = Modifier
+                                    //.align(Alignment.Center)
+                                    .padding(top = 1.dp),
+                                text = "Duration:"
+                            )
+
+                            InlineSlider(
+                                value = islrVibrationDuration.toFloat(),
+                                onValueChange = { islrVibrationDuration = it.toLong() },
+                                increaseIcon = { Icon(InlineSliderDefaults.Increase, "Increase") },
+                                decreaseIcon = { Icon(InlineSliderDefaults.Decrease, "Decrease") },
+                                valueRange = 0f..1000.0f,
+                                steps = 8,
+                                segmented = true
+                            )
+                        }
                     }
                 }
             }
@@ -360,6 +403,8 @@ fun WearApp(greetingName: String, ctx: Context?) {
                         pkrEnabled = false;
                         val threshold = pkrItems[pkrState.selectedOption].toDouble()
                         mysvcIntent.putExtra("threshold", threshold)
+                        mysvcIntent.putExtra("islrVibrationLevel", islrVibrationLevel)
+                        mysvcIntent.putExtra("islrVibrationDuration", islrVibrationLevel)
                         mysvcIntent.setAction("apply")
 
                         fun GetDelayMsecFromNow(h: Int, m: Int): Long

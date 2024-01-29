@@ -27,6 +27,8 @@ class MyService : Service(), SensorEventListener {
     private var mAccelerometer : Sensor ?= null
 
     public var threshold : Double = 0.0;
+    public var islrVibrationLevel : Int = 0
+    public var islrVibrationDuration : Long = 0
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int)
     {
@@ -46,7 +48,7 @@ class MyService : Service(), SensorEventListener {
                 val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
                 val vibrationEffect1: VibrationEffect
                 vibrationEffect1 =
-                    VibrationEffect.createOneShot(333, 255) //VibrationEffect.DEFAULT_AMPLITUDE)
+                    VibrationEffect.createOneShot(islrVibrationDuration, islrVibrationLevel)
 
                 // it is safe to cancel other vibrations currently taking place
                 vibrator.cancel()
@@ -120,6 +122,8 @@ class MyService : Service(), SensorEventListener {
         if (intent.getAction().equals("apply"))
         {
             threshold = intent.getExtras()!!.getDouble("threshold")
+            islrVibrationLevel = intent.getExtras()!!.getInt("islrVibrationLevel")
+            islrVibrationDuration = intent.getExtras()!!.getLong("islrVibrationDuration")
         }
 
         mSensorManager!!.registerListener(this,mAccelerometer,
