@@ -81,11 +81,26 @@ class TimePickerState(
     }
 }
 
+class OptionalTimePickerState(
+    initiallySelectedOptionH: Int = 0,
+    initiallySelectedOptionM: Int = 0,
+    initialEnabled: Boolean = false
+)
+{
+    val timePickerState: TimePickerState
+    var tpkrEnabled: Boolean
+
+    init {
+        timePickerState = TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM)
+        tpkrEnabled = initialEnabled
+    }
+}
+
 class MainActivity : ComponentActivity() {
     var sharedPref: SharedPreferences ?= null
     var pkrState: PickerState ?= null
-    var timePickerStateBegin: TimePickerState ?= null
-    var timePickerStateEnd: TimePickerState ?= null
+    var optionalTimePickerStateBegin: OptionalTimePickerState ?= null
+    var optionalTimePickerStateEnd: OptionalTimePickerState ?= null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -106,10 +121,14 @@ class MainActivity : ComponentActivity() {
         with(sharedPref!!.edit())
         {
             putInt("pkrIdx", pkrState!!.selectedOption)
-            putInt("tpkrBegH", timePickerStateBegin!!.hourState.selectedOption)
-            putInt("tpkrBegM", timePickerStateBegin!!.minuteState.selectedOption)
-            putInt("tpkrEndH", timePickerStateEnd!!.hourState.selectedOption)
-            putInt("tpkrEndM", timePickerStateEnd!!.minuteState.selectedOption)
+
+            putInt("tpkrBegH", optionalTimePickerStateBegin!!.timePickerState.hourState.selectedOption)
+            putInt("tpkrBegM", optionalTimePickerStateBegin!!.timePickerState.minuteState.selectedOption)
+            putBoolean("tpkrBegEnabled", optionalTimePickerStateBegin!!.tpkrEnabled)
+
+            putInt("tpkrEndH", optionalTimePickerStateEnd!!.timePickerState.hourState.selectedOption)
+            putInt("tpkrEndM", optionalTimePickerStateEnd!!.timePickerState.minuteState.selectedOption)
+            putBoolean("tpkrEndEnabled", optionalTimePickerStateBegin!!.tpkrEnabled)
             apply()
         }
         super.onPause();
@@ -136,19 +155,29 @@ fun WearApp(greetingName: String, ctx: Context?) {
     // begin
     var tpkrBegEnabled by remember { mutableStateOf(false) }
     var tpkrEndEnabled by remember { mutableStateOf(false) }
+
     @Composable
     fun rememberTimePickerState(
         initiallySelectedOptionH: Int,
         initiallySelectedOptionM: Int
     ) = remember { TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM) }
 
-    var timePickerStateBegin = rememberTimePickerState(
+    @Composable
+    fun rememberOptionalTimePickerState(
+        initiallySelectedOptionH: Int,
+        initiallySelectedOptionM: Int,
+        initialEnabled: Boolean
+    ) = remember { OptionalTimePickerState(initiallySelectedOptionH, initiallySelectedOptionM, initialEnabled) }
+
+    var optionalTimePickerStateBegin = rememberOptionalTimePickerState(
         sharedPref?.getInt("tpkrBegH", 4) ?: 4,
         sharedPref?.getInt("tpkrBegM", 0) ?: 0,
+        sharedPref?.getBoolean("tpkrBegEnabled", false) ?: false
     )
-    var timePickerStateEnd = rememberTimePickerState(
+    var optionalTimePickerStateEnd = rememberOptionalTimePickerState(
         sharedPref?.getInt("tpkrEndH", 7) ?: 7,
         sharedPref?.getInt("tpkrEndM", 0) ?: 0,
+        sharedPref?.getBoolean("tpkrEndEnabled", false) ?: false
     )
 
     if(ctx != null) {
@@ -156,8 +185,8 @@ fun WearApp(greetingName: String, ctx: Context?) {
 
         activity.sharedPref = sharedPref
         activity.pkrState = pkrState
-        activity.timePickerStateBegin = timePickerStateBegin
-        activity.timePickerStateEnd = timePickerStateEnd
+        activity.optionalTimePickerStateBegin = optionalTimePickerStateBegin
+        activity.optionalTimePickerStateEnd = optionalTimePickerStateEnd
     }
 
     PhasigTheme {
@@ -219,6 +248,27 @@ fun WearApp(greetingName: String, ctx: Context?) {
                 }
             }
 
+            @Composable
+            fun OptionalTimePicker(label: String, optionalTimePickerState : OptionalTimePickerState)
+            {
+                Column()
+                {
+                    Row()
+                    {
+                        Text(label)
+                        Checkbox(
+                            checked = optionalTimePickerState.tpkrEnabled,
+                            enabled = true,
+                            onCheckedChange = { optionalTimePickerState.tpkrEnabled = it }
+                        )
+                    }
+
+                    if(optionalTimePickerState.tpkrEnabled) {
+                        TimePicker(optionalTimePickerState.timePickerState)
+                    }
+                }
+            }
+
             ScalingLazyColumn(
                 //contentPadding = PaddingValues(top = 1.dp),
                 state = listState,
@@ -252,43 +302,28 @@ fun WearApp(greetingName: String, ctx: Context?) {
                 item {
                     ExpandableCard(title = "begin at " +
                         if(tpkrBegEnabled) {
-                            "%02d:".format(timePickerStateBegin.hourState.selectedOption) +
-                            "%02d".format(timePickerStateBegin.minuteState.selectedOption)
+                            "%02d:".format(optionalTimePickerStateBegin.timePickerState.hourState.selectedOption) +
+                            "%02d".format(optionalTimePickerStateBegin.timePickerState.minuteState.selectedOption)
                         } else
                         {
                             "now"
                         }
                     ) {
-                        Column()
-                        {
-                            Row()
-                            {
-                                Text("Use time:")
-                                Checkbox(
-                                    checked = tpkrBegEnabled,
-                                    enabled = true,
-                                    onCheckedChange = { tpkrBegEnabled = it }
-                                )
-                            }
-
-                            if(tpkrBegEnabled) {
-                                TimePicker(timePickerStateBegin)
-                            }
-                        }
+                        OptionalTimePicker("Use time:", optionalTimePickerStateBegin)
                     }
                 }
 
                 item {
                     ExpandableCard(title = "end at " +
                         if(tpkrEndEnabled) {
-                            "%02d:".format(timePickerStateEnd.hourState.selectedOption) +
-                            "%02d".format(timePickerStateEnd.minuteState.selectedOption)
+                            "%02d:".format(optionalTimePickerStateEnd.timePickerState.hourState.selectedOption) +
+                            "%02d".format(optionalTimePickerStateEnd.timePickerState.minuteState.selectedOption)
                         } else
                         {
                             "never"
                         }
                     ) {
-                        TimePicker(timePickerStateEnd)
+                        OptionalTimePicker("Use time:", optionalTimePickerStateEnd)
                     }
                 }
 
