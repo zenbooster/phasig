@@ -53,6 +53,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.wear.compose.material.Checkbox
 import androidx.wear.compose.material.ToggleChip
+import java.util.GregorianCalendar
+import java.util.Calendar
 
 import com.example.phasig.MyService
 
@@ -60,6 +62,7 @@ import com.example.phasig.MyService
 import com.example.phasig.presentation.theme.PhasigTheme
 import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
+import java.util.Objects
 
 class TimePickerState(
     initiallySelectedOptionH: Int = 0,
@@ -343,9 +346,14 @@ fun WearApp(greetingName: String, ctx: Context?) {
             CompactButton(
                 enabled = true,
                 onClick = {
+                    val tokenSFS = 0
+                    val tokenSS = 1
+
                     btnChecked = !btnChecked
 
                     if (btnChecked) { // pause
+                        Handler(Looper.getMainLooper()).removeCallbacksAndMessages(tokenSS);
+                        Handler(Looper.getMainLooper()).removeCallbacksAndMessages(tokenSFS);
                         pkrEnabled = true
                         ctx?.stopService(mysvcIntent)
                     } else { // play
@@ -354,15 +362,36 @@ fun WearApp(greetingName: String, ctx: Context?) {
                         mysvcIntent.putExtra("threshold", threshold)
                         mysvcIntent.setAction("apply")
 
+                        fun GetDelayMsecFromNow(h: Int, m: Int): Long
+                        {
+                            val cal = GregorianCalendar()
+                            val om = (cal[Calendar.HOUR] * 60) + cal[Calendar.MINUTE]
+                            var nm = (h * 60) + m
+
+                            if (nm < om) {
+                                nm += 24 * 60
+                            }
+
+                            val delayMsec = ((nm - om) * 60 - cal[Calendar.SECOND]) * 1000
+
+                            return delayMsec.toLong()
+                        }
+
                         with(optionalTimePickerStateBegin!!)
                         {
                             if (tpkrEnabled)
                             {
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    //Do something at begin time
-                                    ctx?.startForegroundService(mysvcIntent)
-                                }, ((timePickerState.hourState.selectedOption * 3600 +
-                                        timePickerState.minuteState.selectedOption * 60) * 1000L))
+                                Handler(Looper.getMainLooper()).postDelayed(
+                                    {
+                                        //Do something at begin time
+                                        ctx?.startForegroundService(mysvcIntent)
+                                    },
+                                    tokenSFS,
+                                    GetDelayMsecFromNow(
+                                        timePickerState.hourState.selectedOption,
+                                        timePickerState.minuteState.selectedOption
+                                    )
+                                )
                             }
                             else
                             {
@@ -374,13 +403,19 @@ fun WearApp(greetingName: String, ctx: Context?) {
                         {
                             if (tpkrEnabled)
                             {
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    //Do something at end time
-                                    btnChecked = !btnChecked
-                                    pkrEnabled = true
-                                    ctx?.stopService(mysvcIntent)
-                                }, ((timePickerState.hourState.selectedOption * 3600 +
-                                        timePickerState.minuteState.selectedOption * 60) * 1000L))
+                                Handler(Looper.getMainLooper()).postDelayed(
+                                    {
+                                        //Do something at end time
+                                        btnChecked = !btnChecked
+                                        pkrEnabled = true
+                                        ctx?.stopService(mysvcIntent)
+                                    },
+                                    tokenSS,
+                                    GetDelayMsecFromNow(
+                                        timePickerState.hourState.selectedOption,
+                                        timePickerState.minuteState.selectedOption
+                                    )
+                                )
                             }
                         }
 

@@ -107,6 +107,7 @@ class MyService : Service(), SensorEventListener {
     override fun onDestroy()
     {
         mSensorManager!!.unregisterListener(this)
+        Toast.makeText(this, "service destroyed", Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreate() {
@@ -116,8 +117,6 @@ class MyService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show()
-
         if (intent.getAction().equals("apply"))
         {
             threshold = intent.getExtras()!!.getDouble("threshold")
@@ -126,6 +125,7 @@ class MyService : Service(), SensorEventListener {
         mSensorManager!!.registerListener(this,mAccelerometer,
             SensorManager.SENSOR_DELAY_GAME)
 
+        Toast.makeText(this, "service started", Toast.LENGTH_SHORT).show()
         // If we get killed, after returning from here, restart
         return START_NOT_STICKY
     }
