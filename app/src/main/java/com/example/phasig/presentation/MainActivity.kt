@@ -8,6 +8,7 @@ package com.example.phasig.presentation
 
 import android.os.Bundle
 import android.os.Looper
+import android.os.Handler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -88,11 +89,11 @@ class OptionalTimePickerState(
 )
 {
     val timePickerState: TimePickerState
-    var tpkrEnabled: Boolean
+    var tpkrEnabled by mutableStateOf(initialEnabled)
 
     init {
         timePickerState = TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM)
-        tpkrEnabled = initialEnabled
+        //tpkrEnabled = initialEnabled
     }
 }
 
@@ -151,11 +152,8 @@ fun WearApp(greetingName: String, ctx: Context?) {
     val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
 
     val listState = rememberScalingLazyListState()
-    var expandedState by remember { mutableStateOf(false) }
+    //var expandedState by remember { mutableStateOf(false) }
     // begin
-    var tpkrBegEnabled by remember { mutableStateOf(false) }
-    var tpkrEndEnabled by remember { mutableStateOf(false) }
-
     @Composable
     fun rememberTimePickerState(
         initiallySelectedOptionH: Int,
@@ -300,30 +298,34 @@ fun WearApp(greetingName: String, ctx: Context?) {
                 }
 
                 item {
-                    ExpandableCard(title = "begin at " +
-                        if(tpkrBegEnabled) {
-                            "%02d:".format(optionalTimePickerStateBegin.timePickerState.hourState.selectedOption) +
-                            "%02d".format(optionalTimePickerStateBegin.timePickerState.minuteState.selectedOption)
-                        } else
-                        {
-                            "now"
+                    with(optionalTimePickerStateBegin) {
+                        ExpandableCard(
+                            title = "begin at " +
+                                    if (tpkrEnabled) {
+                                        "%02d:".format(timePickerState.hourState.selectedOption) +
+                                                "%02d".format(timePickerState.minuteState.selectedOption)
+                                    } else {
+                                        "now"
+                                    }
+                        ) {
+                            OptionalTimePicker("Use time:", optionalTimePickerStateBegin)
                         }
-                    ) {
-                        OptionalTimePicker("Use time:", optionalTimePickerStateBegin)
                     }
                 }
 
                 item {
-                    ExpandableCard(title = "end at " +
-                        if(tpkrEndEnabled) {
-                            "%02d:".format(optionalTimePickerStateEnd.timePickerState.hourState.selectedOption) +
-                            "%02d".format(optionalTimePickerStateEnd.timePickerState.minuteState.selectedOption)
-                        } else
-                        {
-                            "never"
+                    with(optionalTimePickerStateEnd) {
+                        ExpandableCard(
+                            title = "end at " +
+                                    if (tpkrEnabled) {
+                                        "%02d:".format(timePickerState.hourState.selectedOption) +
+                                                "%02d".format(timePickerState.minuteState.selectedOption)
+                                    } else {
+                                        "never"
+                                    }
+                        ) {
+                            OptionalTimePicker("Use time:", optionalTimePickerStateEnd)
                         }
-                    ) {
-                        OptionalTimePicker("Use time:", optionalTimePickerStateEnd)
                     }
                 }
 
@@ -352,10 +354,37 @@ fun WearApp(greetingName: String, ctx: Context?) {
                         mysvcIntent.putExtra("threshold", threshold)
                         mysvcIntent.setAction("apply")
 
-                        //timePickerStateBegin!!.hourState.selectedOption
+                        with(optionalTimePickerStateBegin!!)
+                        {
+                            if (tpkrEnabled)
+                            {
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    //Do something at begin time
+                                    ctx?.startForegroundService(mysvcIntent)
+                                }, ((timePickerState.hourState.selectedOption * 3600 +
+                                        timePickerState.minuteState.selectedOption * 60) * 1000L))
+                            }
+                            else
+                            {
+                                ctx?.startForegroundService(mysvcIntent)
+                            }
+                        }
 
-                        ctx?.startForegroundService(mysvcIntent)
-                        //ctx?.startService(mysvcIntent)
+                        with(optionalTimePickerStateEnd!!)
+                        {
+                            if (tpkrEnabled)
+                            {
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    //Do something at end time
+                                    btnChecked = !btnChecked
+                                    pkrEnabled = true
+                                    ctx?.stopService(mysvcIntent)
+                                }, ((timePickerState.hourState.selectedOption * 3600 +
+                                        timePickerState.minuteState.selectedOption * 60) * 1000L))
+                            }
+                        }
+
+                        //ctx?.startForegroundService(mysvcIntent)
                     }
                 },
                 modifier = Modifier
