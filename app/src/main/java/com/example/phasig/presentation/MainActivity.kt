@@ -6,79 +6,76 @@
 
 package com.example.phasig.presentation
 
+//import com.example.phasig.R
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
-import android.os.Looper
 import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.Picker
-import androidx.wear.compose.material.PickerState
-import androidx.wear.compose.material.CompactButton
-import androidx.wear.compose.material.Button
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.wear.compose.material.rememberPickerState
-import androidx.compose.runtime.mutableStateOf
-import android.content.Intent
-import android.content.Context
-import android.content.SharedPreferences
-import android.view.MotionEvent
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.unit.sp
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.wear.compose.foundation.SwipeToDismissValue
+import androidx.wear.compose.foundation.edgeSwipeToDismiss
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
-import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.compose.ui.input.pointer.pointerInteropFilter
+import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
+import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.Checkbox
+import androidx.wear.compose.material.HorizontalPageIndicator
 import androidx.wear.compose.material.Icon
-import androidx.wear.compose.material.ToggleChip
-import java.util.GregorianCalendar
-import java.util.Calendar
-
 import androidx.wear.compose.material.InlineSlider
 import androidx.wear.compose.material.InlineSliderDefaults
-
-import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
+import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.PageIndicatorState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.wear.compose.material.HorizontalPageIndicator
-import androidx.compose.ui.graphics.Color
-import androidx.wear.compose.foundation.edgeSwipeToDismiss
+import androidx.wear.compose.material.Picker
+import androidx.wear.compose.material.PickerState
 import androidx.wear.compose.material.SwipeToDismissBox
-import androidx.compose.runtime.LaunchedEffect
-import androidx.wear.compose.foundation.SwipeToDismissValue
-
+import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.rememberPickerState
 import com.example.phasig.MyService
-
-//import com.example.phasig.R
 import com.example.phasig.presentation.theme.PhasigTheme
 import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
+import java.util.Calendar
+import java.util.GregorianCalendar
+
 
 class TimePickerState(
     initiallySelectedOptionH: Int = 0,
@@ -570,8 +567,34 @@ fun WearApp(greetingName: String, ctx: Context?) {
 
                                             with(optionalTimePickerStateBegin!!)
                                             {
+                                                val delay = GetDelayMsecFromNow(
+                                                    timePickerState.hourState.selectedOption,
+                                                    timePickerState.minuteState.selectedOption
+                                                )
+
                                                 if (tpkrEnabled) {
-                                                    Handler(Looper.getMainLooper()).postDelayed(
+                                                    /*val startServiceIntent: Intent = Intent(
+                                                        ctx,
+                                                        MyService::class.java
+                                                    )*/
+                                                    val contentIntent = PendingIntent.getService(
+                                                        ctx,
+                                                        0,
+                                                        mysvcIntent, //startServiceIntent,
+                                                        PendingIntent.FLAG_CANCEL_CURRENT or
+                                                                PendingIntent.FLAG_IMMUTABLE
+                                                    )
+                                                    val alarmManager = ctx?.getSystemService(
+                                                        Context.ALARM_SERVICE
+                                                    ) as AlarmManager
+
+                                                    alarmManager.set(
+                                                        AlarmManager.RTC_WAKEUP,
+                                                        SystemClock.currentThreadTimeMillis() + delay,
+                                                        contentIntent
+                                                    );
+
+                                                    /*Handler(Looper.getMainLooper()).postDelayed(
                                                         {
                                                             //Do something at begin time
                                                             /*ctx?.startForegroundService(
@@ -584,7 +607,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             timePickerState.hourState.selectedOption,
                                                             timePickerState.minuteState.selectedOption
                                                         )
-                                                    )
+                                                    )*/
                                                 } else {
                                                     /*ctx?.startForegroundService(
                                                         mysvcIntent
