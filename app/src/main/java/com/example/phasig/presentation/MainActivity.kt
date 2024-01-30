@@ -525,6 +525,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                             pkrEnabled = false;
                                             val threshold =
                                                 pkrItems[pkrState.selectedOption].toDouble()
+
                                             mysvcIntent.putExtra("threshold", threshold)
                                             mysvcIntent.putExtra(
                                                 "islrVibrationLevel",
@@ -535,6 +536,18 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 islrVibrationDuration
                                             )
                                             mysvcIntent.setAction("apply")
+
+                                            fun StartMainWork()
+                                            {
+                                                ctx?.startForegroundService(
+                                                    mysvcIntent
+                                                )
+                                            }
+
+                                            fun StopMainWork()
+                                            {
+                                                ctx?.stopService(mysvcIntent)
+                                            }
 
                                             fun GetDelayMsecFromNow(
                                                 h: Int,
@@ -561,9 +574,10 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                     Handler(Looper.getMainLooper()).postDelayed(
                                                         {
                                                             //Do something at begin time
-                                                            ctx?.startForegroundService(
+                                                            /*ctx?.startForegroundService(
                                                                 mysvcIntent
-                                                            )
+                                                            )*/
+                                                            StartMainWork()
                                                         },
                                                         tokenSFS,
                                                         GetDelayMsecFromNow(
@@ -572,9 +586,10 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                         )
                                                     )
                                                 } else {
-                                                    ctx?.startForegroundService(
+                                                    /*ctx?.startForegroundService(
                                                         mysvcIntent
-                                                    )
+                                                    )*/
+                                                    StartMainWork()
                                                 }
                                             }
 
@@ -586,7 +601,8 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             //Do something at end time
                                                             btnChecked = !btnChecked
                                                             pkrEnabled = true
-                                                            ctx?.stopService(mysvcIntent)
+                                                            //ctx?.stopService(mysvcIntent)
+                                                            StopMainWork()
                                                         },
                                                         tokenSS,
                                                         GetDelayMsecFromNow(
