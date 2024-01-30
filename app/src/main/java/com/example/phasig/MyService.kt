@@ -115,7 +115,7 @@ class MyService : Service(), SensorEventListener {
     override fun onCreate() {
         mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         mAccelerometer = mSensorManager!!.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        startForeground(FOREGROUND_SERVICE_TYPE_HEALTH, createNotification())
+        startForeground(1, createNotification())
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
