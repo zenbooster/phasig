@@ -7,8 +7,10 @@
 package com.example.phasig.presentation
 
 //import com.example.phasig.R
+
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -17,6 +19,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -76,6 +79,47 @@ import java.text.DecimalFormat
 import java.util.Calendar
 import java.util.GregorianCalendar
 
+
+class MyServiceStopAlarm : BroadcastReceiver {
+    var alarmMgr: AlarmManager? = null
+    var pi: PendingIntent? = null
+    //private val REMINDER_BUNDLE = "MyReminderBundle"
+
+    // this constructor is called by the alarm manager.
+    constructor()
+
+    // you can use this constructor to create the alarm.
+    //  Just pass in the main activity as the context,
+    //  any extras you'd like to get later when triggered
+    //  and the timeout
+    constructor(context: Context, intent: Intent, delay: Int) {
+        alarmMgr =
+            context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        var vpi: PendingIntent = PendingIntent.getBroadcast(
+            context, 0, intent,
+            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+//        alarmMgr!![AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + delay] = vpi
+        alarmMgr!!.set(
+            AlarmManager.RTC_WAKEUP,
+            SystemClock.currentThreadTimeMillis() + delay,
+            vpi
+        );
+        pi = vpi
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        // here you can get the extras you passed in when creating the alarm
+        //intent.getBundleExtra(REMINDER_BUNDLE));
+        Toast.makeText(context, "Alarm went off", Toast.LENGTH_SHORT).show()
+        context.stopService(intent)
+    }
+
+    public fun cancel() {
+        pi?.let { alarmMgr?.cancel(it) }
+    }
+
+}
 
 class TimePickerState(
     initiallySelectedOptionH: Int = 0,
@@ -169,6 +213,11 @@ fun WearApp(greetingName: String, ctx: Context?) {
     val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
     var btnChecked by remember { mutableStateOf(true) }
     val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
+
+
+    var mssa: MyServiceStopAlarm? = null
+    var alarmManager: AlarmManager? = null
+    var contentIntent: PendingIntent? = null
 
     val listState = rememberScalingLazyListState()
     //var expandedState by remember { mutableStateOf(false) }
@@ -504,18 +553,18 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                 Button(
                                     enabled = true,
                                     onClick = {
-                                        val tokenSFS = 0
-                                        val tokenSS = 1
 
                                         btnChecked = !btnChecked
 
                                         if (btnChecked) { // pause
-                                            Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
+                                            mssa?.cancel()
+                                            contentIntent?.let { alarmManager?.cancel(it) }
+                                            /*Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
                                                 tokenSS
                                             );
                                             Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
                                                 tokenSFS
-                                            );
+                                            );*/
                                             pkrEnabled = true
                                             ctx?.stopService(mysvcIntent)
                                         } else { // play
@@ -577,37 +626,23 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                         ctx,
                                                         MyService::class.java
                                                     )*/
-                                                    val contentIntent = PendingIntent.getService(
+                                                    var ci = PendingIntent.getService(
                                                         ctx,
                                                         0,
                                                         mysvcIntent, //startServiceIntent,
                                                         PendingIntent.FLAG_CANCEL_CURRENT or
                                                                 PendingIntent.FLAG_IMMUTABLE
                                                     )
-                                                    val alarmManager = ctx?.getSystemService(
+                                                    alarmManager = ctx?.getSystemService(
                                                         Context.ALARM_SERVICE
                                                     ) as AlarmManager
 
-                                                    alarmManager.set(
+                                                    alarmManager?.set(
                                                         AlarmManager.RTC_WAKEUP,
                                                         SystemClock.currentThreadTimeMillis() + delay,
-                                                        contentIntent
+                                                        ci
                                                     );
-
-                                                    /*Handler(Looper.getMainLooper()).postDelayed(
-                                                        {
-                                                            //Do something at begin time
-                                                            /*ctx?.startForegroundService(
-                                                                mysvcIntent
-                                                            )*/
-                                                            StartMainWork()
-                                                        },
-                                                        tokenSFS,
-                                                        GetDelayMsecFromNow(
-                                                            timePickerState.hourState.selectedOption,
-                                                            timePickerState.minuteState.selectedOption
-                                                        )
-                                                    )*/
+                                                    contentIntent = ci
                                                 } else {
                                                     /*ctx?.startForegroundService(
                                                         mysvcIntent
@@ -619,7 +654,17 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                             with(optionalTimePickerStateEnd!!)
                                             {
                                                 if (tpkrEnabled) {
-                                                    Handler(Looper.getMainLooper()).postDelayed(
+                                                    if (ctx != null) {
+                                                        mssa = MyServiceStopAlarm(
+                                                            ctx,
+                                                            mysvcIntent,
+                                                            GetDelayMsecFromNow(
+                                                                timePickerState.hourState.selectedOption,
+                                                                timePickerState.minuteState.selectedOption
+                                                            ).toInt()
+                                                        )
+                                                    }
+                                                    /*Handler(Looper.getMainLooper()).postDelayed(
                                                         {
                                                             //Do something at end time
                                                             btnChecked = !btnChecked
@@ -632,7 +677,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             timePickerState.hourState.selectedOption,
                                                             timePickerState.minuteState.selectedOption
                                                         )
-                                                    )
+                                                    )*/
                                                 }
                                             }
                                         }
