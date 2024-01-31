@@ -10,16 +10,12 @@ package com.example.phasig.presentation
 
 import android.app.AlarmManager
 import android.app.PendingIntent
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -72,54 +68,11 @@ import androidx.wear.compose.material.PickerState
 import androidx.wear.compose.material.SwipeToDismissBox
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.rememberPickerState
-import com.example.phasig.MyService
 import com.example.phasig.presentation.theme.PhasigTheme
 import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
 import java.util.Calendar
-import java.util.GregorianCalendar
-
-
-class MyServiceStopAlarm : BroadcastReceiver {
-    var alarmMgr: AlarmManager? = null
-    var pi: PendingIntent? = null
-    //private val REMINDER_BUNDLE = "MyReminderBundle"
-
-    // this constructor is called by the alarm manager.
-    constructor()
-
-    // you can use this constructor to create the alarm.
-    //  Just pass in the main activity as the context,
-    //  any extras you'd like to get later when triggered
-    //  and the timeout
-    constructor(context: Context, intent: Intent, delay: Int) {
-        alarmMgr =
-            context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        var vpi: PendingIntent = PendingIntent.getBroadcast(
-            context, 0, intent,
-            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-//        alarmMgr!![AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + delay] = vpi
-        alarmMgr!!.set(
-            AlarmManager.RTC_WAKEUP,
-            SystemClock.currentThreadTimeMillis() + delay,
-            vpi
-        );
-        pi = vpi
-    }
-
-    override fun onReceive(context: Context, intent: Intent) {
-        // here you can get the extras you passed in when creating the alarm
-        //intent.getBundleExtra(REMINDER_BUNDLE));
-        Toast.makeText(context, "Alarm went off", Toast.LENGTH_SHORT).show()
-        context.stopService(intent)
-    }
-
-    public fun cancel() {
-        pi?.let { alarmMgr?.cancel(it) }
-    }
-
-}
+//import java.util.GregorianCalendar
 
 class TimePickerState(
     initiallySelectedOptionH: Int = 0,
@@ -214,10 +167,9 @@ fun WearApp(greetingName: String, ctx: Context?) {
     var btnChecked by remember { mutableStateOf(true) }
     val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
 
-
-    var mssa: MyServiceStopAlarm? = null
     var alarmManager: AlarmManager? = null
-    var contentIntent: PendingIntent? = null
+    var piMySvc: PendingIntent? = null
+    var piMySvcK: PendingIntent? = null
 
     val listState = rememberScalingLazyListState()
     //var expandedState by remember { mutableStateOf(false) }
@@ -557,8 +509,8 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                         btnChecked = !btnChecked
 
                                         if (btnChecked) { // pause
-                                            mssa?.cancel()
-                                            contentIntent?.let { alarmManager?.cancel(it) }
+                                            piMySvcK?.let { alarmManager?.cancel(it) }
+                                            piMySvc?.let { alarmManager?.cancel(it) }
                                             /*Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
                                                 tokenSS
                                             );
@@ -595,54 +547,54 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 ctx?.stopService(mysvcIntent)
                                             }
 
-                                            fun GetDelayMsecFromNow(
+                                            fun GetDelayMsecFromTime(
                                                 h: Int,
                                                 m: Int
                                             ): Long {
-                                                val cal = GregorianCalendar()
-                                                val om =
-                                                    (cal[Calendar.HOUR] * 60) + cal[Calendar.MINUTE]
-                                                var nm = (h * 60) + m
+                                                val cal = Calendar.getInstance()
+                                                val ch = cal[Calendar.HOUR_OF_DAY]
+                                                val cm = cal[Calendar.MINUTE]
+                                                val cs = cal[Calendar.SECOND]
+                                                val cmin = (ch * 60) + cm
+                                                var nmin = (h * 60) + m
 
-                                                if (nm < om) {
-                                                    nm += 24 * 60
+                                                if (nmin < cmin) {
+                                                    nmin += 24 * 60
                                                 }
 
                                                 val delayMsec =
-                                                    ((nm - om) * 60 - cal[Calendar.SECOND]) * 1000
+                                                    ((nmin - cmin) * 60 - cs) * 1000
 
                                                 return delayMsec.toLong()
                                             }
 
                                             with(optionalTimePickerStateBegin!!)
                                             {
-                                                val delay = GetDelayMsecFromNow(
-                                                    timePickerState.hourState.selectedOption,
-                                                    timePickerState.minuteState.selectedOption
-                                                )
-
                                                 if (tpkrEnabled) {
-                                                    /*val startServiceIntent: Intent = Intent(
-                                                        ctx,
-                                                        MyService::class.java
-                                                    )*/
-                                                    var ci = PendingIntent.getService(
-                                                        ctx,
-                                                        0,
-                                                        mysvcIntent, //startServiceIntent,
-                                                        PendingIntent.FLAG_CANCEL_CURRENT or
-                                                                PendingIntent.FLAG_IMMUTABLE
-                                                    )
-                                                    alarmManager = ctx?.getSystemService(
-                                                        Context.ALARM_SERVICE
-                                                    ) as AlarmManager
+                                                    if (ctx != null) {
+                                                        val delay = GetDelayMsecFromTime(
+                                                            timePickerState.hourState.selectedOption,
+                                                            timePickerState.minuteState.selectedOption
+                                                        )
 
-                                                    alarmManager?.set(
-                                                        AlarmManager.RTC_WAKEUP,
-                                                        SystemClock.currentThreadTimeMillis() + delay,
-                                                        ci
-                                                    );
-                                                    contentIntent = ci
+                                                        var pi = PendingIntent.getService(
+                                                            ctx,
+                                                            0,
+                                                            mysvcIntent,
+                                                            PendingIntent.FLAG_CANCEL_CURRENT or
+                                                                    PendingIntent.FLAG_IMMUTABLE
+                                                        )
+                                                        alarmManager = ctx?.getSystemService(
+                                                            Context.ALARM_SERVICE
+                                                        ) as AlarmManager
+
+                                                        alarmManager?.setExact(
+                                                            AlarmManager.RTC_WAKEUP,
+                                                            System.currentTimeMillis() + delay,
+                                                            pi
+                                                        );
+                                                        piMySvc = pi
+                                                    }
                                                 } else {
                                                     /*ctx?.startForegroundService(
                                                         mysvcIntent
@@ -655,29 +607,37 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                             {
                                                 if (tpkrEnabled) {
                                                     if (ctx != null) {
-                                                        mssa = MyServiceStopAlarm(
-                                                            ctx,
-                                                            mysvcIntent,
-                                                            GetDelayMsecFromNow(
-                                                                timePickerState.hourState.selectedOption,
-                                                                timePickerState.minuteState.selectedOption
-                                                            ).toInt()
-                                                        )
-                                                    }
-                                                    /*Handler(Looper.getMainLooper()).postDelayed(
-                                                        {
-                                                            //Do something at end time
-                                                            btnChecked = !btnChecked
-                                                            pkrEnabled = true
-                                                            //ctx?.stopService(mysvcIntent)
-                                                            StopMainWork()
-                                                        },
-                                                        tokenSS,
-                                                        GetDelayMsecFromNow(
+                                                        val delayEnd = GetDelayMsecFromTime(
                                                             timePickerState.hourState.selectedOption,
                                                             timePickerState.minuteState.selectedOption
                                                         )
-                                                    )*/
+
+                                                        val mysvcKIntent: Intent = Intent(
+                                                            ctx,
+                                                            MyServiceKiller::class.java
+                                                        )
+                                                        mysvcKIntent.putExtra("victim", mysvcIntent)
+                                                        //mysvcKIntent.putExtra("btnChecked", btnChecked)
+                                                        mysvcKIntent.setAction("apply")
+
+                                                        var pi = PendingIntent.getService(
+                                                            ctx,
+                                                            0,
+                                                            mysvcKIntent,
+                                                            PendingIntent.FLAG_CANCEL_CURRENT or
+                                                                    PendingIntent.FLAG_IMMUTABLE
+                                                        )
+                                                        alarmManager = ctx?.getSystemService(
+                                                            Context.ALARM_SERVICE
+                                                        ) as AlarmManager
+
+                                                        alarmManager?.setExact(
+                                                            AlarmManager.RTC_WAKEUP,
+                                                            System.currentTimeMillis() + delayEnd,
+                                                            pi
+                                                        );
+                                                        piMySvcK = pi
+                                                    }
                                                 }
                                             }
                                         }

@@ -1,4 +1,4 @@
-package com.example.phasig
+package com.example.phasig.presentation
 
 import android.app.Service
 import android.app.Notification
@@ -17,10 +17,9 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import java.lang.Math.sqrt
 import android.graphics.Color
-import com.example.phasig.presentation.MainActivity
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
-import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+import com.example.phasig.R
 
 class MyService : Service(), SensorEventListener {
     private var mSensorManager : SensorManager ?= null
