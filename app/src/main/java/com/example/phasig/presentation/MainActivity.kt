@@ -587,7 +587,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             Context.ALARM_SERVICE
                                                         ) as AlarmManager
 
-                                                        alarmManager?.setExact(
+                                                        alarmManager?.setExactAndAllowWhileIdle(
                                                             AlarmManager.RTC_WAKEUP,
                                                             System.currentTimeMillis() + delay,
                                                             pi
@@ -633,7 +633,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             Context.ALARM_SERVICE
                                                         ) as AlarmManager
 
-                                                        alarmManager?.setExact(
+                                                        alarmManager?.setExactAndAllowWhileIdle(
                                                             AlarmManager.RTC_WAKEUP,
                                                             System.currentTimeMillis() + delayEnd,
                                                             pi
