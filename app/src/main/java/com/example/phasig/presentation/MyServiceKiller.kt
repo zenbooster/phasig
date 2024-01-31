@@ -11,13 +11,13 @@ import androidx.compose.runtime.mutableStateOf
 
 class MyServiceKiller : Service() {
     var victim : Intent? = null
-    //var btnChecked : Boolean by mutableStateOf(true)
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (intent.getAction().equals("apply"))
         {
             victim = intent.getExtras()!!.get("victim") as Intent?
-            //btnChecked = intent.getExtras()!!.get("victim") as androidx.compose.runtime.mutableState<Boolean>
+            MainActivity.btnChecked.value = true
+
             stopService(victim)
         }
 

@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -117,6 +118,10 @@ class MainActivity : ComponentActivity() {
     var islrVibrationLevel: Int by mutableStateOf(0)
     var islrVibrationDuration: Long by mutableStateOf(0)
 
+    companion object {
+        var btnChecked = mutableStateOf(true)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
@@ -164,7 +169,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
     val pkrState = rememberPickerState(pkrItems.size, pkrIdx)
     var pkrEnabled by remember { mutableStateOf(true) }
     val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
-    var btnChecked by remember { mutableStateOf(true) }
+    var btnChecked : MutableState<Boolean> = MainActivity.btnChecked
     val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
 
     var alarmManager: AlarmManager? = null
@@ -202,7 +207,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
     var islrVibrationDuration by remember { mutableStateOf(sharedPref.getLong("islrVibrationDuration", 375)) }
 
     if(ctx != null) {
-        val activity = ctx as MainActivity
+        var activity = ctx as MainActivity
 
         activity.sharedPref = sharedPref
         activity.pkrState = pkrState
@@ -506,17 +511,11 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                     enabled = true,
                                     onClick = {
 
-                                        btnChecked = !btnChecked
+                                        btnChecked.value = !btnChecked.value
 
-                                        if (btnChecked) { // pause
+                                        if (btnChecked.value) { // pause
                                             piMySvcK?.let { alarmManager?.cancel(it) }
                                             piMySvc?.let { alarmManager?.cancel(it) }
-                                            /*Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
-                                                tokenSS
-                                            );
-                                            Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
-                                                tokenSFS
-                                            );*/
                                             pkrEnabled = true
                                             ctx?.stopService(mysvcIntent)
                                         } else { // play
@@ -616,8 +615,11 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             ctx,
                                                             MyServiceKiller::class.java
                                                         )
+                                                        val actIntent = Intent(
+                                                            ctx, MainActivity::class.java
+                                                        )
                                                         mysvcKIntent.putExtra("victim", mysvcIntent)
-                                                        //mysvcKIntent.putExtra("btnChecked", btnChecked)
+                                                        mysvcKIntent.putExtra("actIntent", actIntent)
                                                         mysvcKIntent.setAction("apply")
 
                                                         var pi = PendingIntent.getService(
@@ -646,7 +648,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                         .align(Alignment.Center)
                                         .padding(top = 1.dp)
                                 ) {
-                                    Text("${btcap[if (btnChecked) 1 else 0]}")
+                                    Text("${btcap[if (btnChecked.value) 1 else 0]}")
                                 }
                             }
                         }
