@@ -117,12 +117,19 @@ class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val my_intent = Intent(context, MainActivity::class.java)
+        // попробовать FLAG_ACTIVITY_RESET_TASK_IF_NEEDED вместо FLAG_ACTIVITY_SINGLE_TOP
         my_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) // You need this if starting
         context.startActivity(my_intent)
 
         mysvcIntent = intent.getExtras()!!.get("mysvcIntent") as Intent
         //Toast.makeText(context, "AlarmReceiver.onReceive", Toast.LENGTH_SHORT).show()
         context.startForegroundService(mysvcIntent);
+    }
+}
+
+class Core {
+    companion object {
+        var btnChecked = mutableStateOf(true)
     }
 }
 
@@ -133,10 +140,6 @@ class MainActivity : ComponentActivity() {
     var optionalTimePickerStateEnd: OptionalTimePickerState ?= null
     var islrVibrationLevel: Int by mutableStateOf(0)
     var islrVibrationDuration: Long by mutableStateOf(0)
-
-    companion object {
-        var btnChecked = mutableStateOf(true)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -185,21 +188,10 @@ fun WearApp(greetingName: String, ctx: Context?) {
     val pkrState = rememberPickerState(pkrItems.size, pkrIdx)
     var pkrEnabled by remember { mutableStateOf(true) }
     val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
-    var btnChecked : MutableState<Boolean> = MainActivity.btnChecked
+    var btnChecked : MutableState<Boolean> = Core.btnChecked
     val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
     val myAlarmIntent: Intent by lazy { Intent(ctx, AlarmReceiver::class.java) }
     var piAlarm : PendingIntent? = null
-
-    /*myAlarmIntent.putExtra("mysvcIntent", mysvcIntent)
-    myAlarmIntent.setAction("apply")
-
-    var pia = PendingIntent.getBroadcast(
-        ctx,
-        0,
-        myAlarmIntent,
-        PendingIntent.FLAG_CANCEL_CURRENT or
-                PendingIntent.FLAG_IMMUTABLE
-    )*/
 
     var alarmManager: AlarmManager? = null
     var piMySvc: PendingIntent? = null
@@ -208,11 +200,12 @@ fun WearApp(greetingName: String, ctx: Context?) {
     val listState = rememberScalingLazyListState()
     //var expandedState by remember { mutableStateOf(false) }
     // begin
-    @Composable
+    /*@Composable
     fun rememberTimePickerState(
         initiallySelectedOptionH: Int,
         initiallySelectedOptionM: Int
     ) = remember { TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM) }
+    */
 
     @Composable
     fun rememberOptionalTimePickerState(

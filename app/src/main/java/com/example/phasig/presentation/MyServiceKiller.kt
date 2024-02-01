@@ -16,7 +16,7 @@ class MyServiceKiller : Service() {
         if (intent.getAction().equals("apply"))
         {
             victim = intent.getExtras()!!.get("victim") as Intent?
-            MainActivity.btnChecked.value = true
+            Core.btnChecked.value = true
 
             stopService(victim)
         }
