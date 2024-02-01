@@ -113,23 +113,21 @@ class OptionalTimePickerState(
 }
 
 class AlarmReceiver : BroadcastReceiver() {
-    var mysvcIntent: Intent? = null
-
     override fun onReceive(context: Context, intent: Intent) {
         val my_intent = Intent(context, MainActivity::class.java)
         // попробовать FLAG_ACTIVITY_RESET_TASK_IF_NEEDED вместо FLAG_ACTIVITY_SINGLE_TOP
         my_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) // You need this if starting
         context.startActivity(my_intent)
 
-        mysvcIntent = intent.getExtras()!!.get("mysvcIntent") as Intent
-        //Toast.makeText(context, "AlarmReceiver.onReceive", Toast.LENGTH_SHORT).show()
-        context.startForegroundService(mysvcIntent);
+        context.startForegroundService(Core.mysvcIntent);
     }
 }
 
 class Core {
     companion object {
         var btnChecked = mutableStateOf(true)
+        //var mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
+        var mysvcIntent: Intent = Intent()
     }
 }
 
@@ -189,7 +187,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
     var pkrEnabled by remember { mutableStateOf(true) }
     val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
     var btnChecked : MutableState<Boolean> = Core.btnChecked
-    val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
+    //val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
     val myAlarmIntent: Intent by lazy { Intent(ctx, AlarmReceiver::class.java) }
     var piAlarm : PendingIntent? = null
 
@@ -198,6 +196,11 @@ fun WearApp(greetingName: String, ctx: Context?) {
     var piMySvcK: PendingIntent? = null
 
     val listState = rememberScalingLazyListState()
+
+    if (ctx != null) {
+        Core.mysvcIntent.setClass(ctx, AlarmReceiver::class.java)
+    }
+
     //var expandedState by remember { mutableStateOf(false) }
     // begin
     /*@Composable
@@ -540,34 +543,33 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                             //piMySvc?.let { alarmManager?.cancel(it) }
                                             piAlarm?.let { alarmManager?.cancel(it) }
                                             pkrEnabled = true
-                                            ctx?.stopService(mysvcIntent)
+                                            ctx?.stopService(Core.mysvcIntent)
                                         } else { // play
                                             pkrEnabled = false;
                                             val threshold =
                                                 pkrItems[pkrState.selectedOption].toDouble()
 
-                                            mysvcIntent.putExtra("threshold", threshold)
-                                            mysvcIntent.putExtra(
+                                            Core.mysvcIntent.putExtra("threshold", threshold)
+                                            Core.mysvcIntent.putExtra(
                                                 "islrVibrationLevel",
                                                 islrVibrationLevel
                                             )
-                                            mysvcIntent.putExtra(
+                                            Core.mysvcIntent.putExtra(
                                                 "islrVibrationDuration",
                                                 islrVibrationDuration
                                             )
-                                            //mysvcIntent.putExtra("pia", pia)
-                                            mysvcIntent.setAction("apply")
+                                            Core.mysvcIntent.setAction("apply")
 
                                             fun StartMainWork()
                                             {
                                                 ctx?.startForegroundService(
-                                                    mysvcIntent
+                                                    Core.mysvcIntent
                                                 )
                                             }
 
                                             fun StopMainWork()
                                             {
-                                                ctx?.stopService(mysvcIntent)
+                                                ctx?.stopService(Core.mysvcIntent)
                                             }
 
                                             fun GetDelayMsecFromTime(
@@ -600,13 +602,6 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             timePickerState.minuteState.selectedOption
                                                         )
 
-                                                        var /*pi = PendingIntent.getService(
-                                                            ctx,
-                                                            0,
-                                                            mysvcIntent,
-                                                            PendingIntent.FLAG_CANCEL_CURRENT or
-                                                                    PendingIntent.FLAG_IMMUTABLE
-                                                        )*/
                                                         alarmManager = ctx?.getSystemService(
                                                             Context.ALARM_SERVICE
                                                         ) as AlarmManager
@@ -616,9 +611,6 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             System.currentTimeMillis() + delay,
                                                             pi
                                                         );*/
-
-                                                        myAlarmIntent.putExtra("mysvcIntent", mysvcIntent)
-                                                        myAlarmIntent.setAction("apply")
 
                                                         var pia = PendingIntent.getBroadcast(
                                                             ctx,
@@ -638,7 +630,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                     }
                                                 } else {
                                                     /*ctx?.startForegroundService(
-                                                        mysvcIntent
+                                                        Core.mysvcIntent
                                                     )*/
                                                     StartMainWork()
                                                 }
@@ -660,7 +652,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                         val actIntent = Intent(
                                                             ctx, MainActivity::class.java
                                                         )
-                                                        mysvcKIntent.putExtra("victim", mysvcIntent)
+                                                        mysvcKIntent.putExtra("victim", Core.mysvcIntent)
                                                         mysvcKIntent.putExtra("actIntent", actIntent)
                                                         mysvcKIntent.setAction("apply")
 
