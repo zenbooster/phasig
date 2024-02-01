@@ -592,6 +592,11 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             System.currentTimeMillis() + delay,
                                                             pi
                                                         );
+                                                        /*alarmManager?.setAlarmClock(
+                                                            AlarmManager.AlarmClockInfo(
+                                                                System.currentTimeMillis() + delay,
+                                                                null
+                                                            ), pi)*/
                                                         piMySvc = pi
                                                     }
                                                 } else {
@@ -638,6 +643,11 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             System.currentTimeMillis() + delayEnd,
                                                             pi
                                                         );
+                                                        /*alarmManager?.setAlarmClock(
+                                                            AlarmManager.AlarmClockInfo(
+                                                                System.currentTimeMillis() + delayEnd,
+                                                                null
+                                                            ), pi)*/
                                                         piMySvcK = pi
                                                     }
                                                 }
