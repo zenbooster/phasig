@@ -1,5 +1,6 @@
 package com.example.phasig.presentation
 
+import android.app.AlarmManager
 import android.app.Service
 import android.app.Notification
 import android.app.NotificationManager
@@ -19,6 +20,7 @@ import java.lang.Math.sqrt
 import android.graphics.Color
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
+import android.content.Context
 import com.example.phasig.R
 
 class MyService : Service(), SensorEventListener {
@@ -123,6 +125,12 @@ class MyService : Service(), SensorEventListener {
             threshold = intent.getExtras()!!.getDouble("threshold")
             islrVibrationLevel = intent.getExtras()!!.getInt("islrVibrationLevel")
             islrVibrationDuration = intent.getExtras()!!.getLong("islrVibrationDuration")
+            var pia : PendingIntent = intent.getExtras()!!.get("pia") as PendingIntent
+            var alarmManager = getSystemService(
+                Context.ALARM_SERVICE
+            ) as AlarmManager
+
+            alarmManager.cancel(pia)
         }
 
         mSensorManager!!.registerListener(this,mAccelerometer,

@@ -171,6 +171,14 @@ fun WearApp(greetingName: String, ctx: Context?) {
     val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
     var btnChecked : MutableState<Boolean> = MainActivity.btnChecked
     val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
+    val myAlarmIntent: Intent by lazy { Intent(ctx, MainActivityAlarm::class.java) }
+    var pia = PendingIntent.getActivity(
+        ctx,
+        0,
+        myAlarmIntent,
+        PendingIntent.FLAG_CANCEL_CURRENT or
+                PendingIntent.FLAG_IMMUTABLE
+    )
 
     var alarmManager: AlarmManager? = null
     var piMySvc: PendingIntent? = null
@@ -532,6 +540,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 "islrVibrationDuration",
                                                 islrVibrationDuration
                                             )
+                                            mysvcIntent.putExtra("pia", pia)
                                             mysvcIntent.setAction("apply")
 
                                             fun StartMainWork()
@@ -592,11 +601,12 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             System.currentTimeMillis() + delay,
                                                             pi
                                                         );
-                                                        /*alarmManager?.setAlarmClock(
+
+                                                        alarmManager?.setAlarmClock(
                                                             AlarmManager.AlarmClockInfo(
-                                                                System.currentTimeMillis() + delay,
+                                                                System.currentTimeMillis() + delay - 500,
                                                                 null
-                                                            ), pi)*/
+                                                            ), pia)
                                                         piMySvc = pi
                                                     }
                                                 } else {
