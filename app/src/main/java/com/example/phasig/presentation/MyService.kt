@@ -125,12 +125,12 @@ class MyService : Service(), SensorEventListener {
             threshold = intent.getExtras()!!.getDouble("threshold")
             islrVibrationLevel = intent.getExtras()!!.getInt("islrVibrationLevel")
             islrVibrationDuration = intent.getExtras()!!.getLong("islrVibrationDuration")
-            var pia : PendingIntent = intent.getExtras()!!.get("pia") as PendingIntent
+            /*var pia : PendingIntent = intent.getExtras()!!.get("pia") as PendingIntent
             var alarmManager = getSystemService(
                 Context.ALARM_SERVICE
             ) as AlarmManager
 
-            alarmManager.cancel(pia)
+            alarmManager.cancel(pia)*/
         }
 
         mSensorManager!!.registerListener(this,mAccelerometer,
