@@ -198,7 +198,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
     val listState = rememberScalingLazyListState()
 
     if (ctx != null) {
-        Core.mysvcIntent.setClass(ctx, AlarmReceiver::class.java)
+        Core.mysvcIntent.setClass(ctx, MyService::class.java)
     }
 
     //var expandedState by remember { mutableStateOf(false) }
