@@ -125,20 +125,79 @@ class AlarmReceiver : BroadcastReceiver() {
 
 class Core {
     companion object {
+        var sharedPref : SharedPreferences? = null
+        val df = DecimalFormat("#.##")
         var btnChecked = mutableStateOf(true)
-        //var mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
+        var pkrIdx : Int = 12
+        val pkrItems = List(101) { df.format(it) }
+        var pkrState : PickerState = PickerState(pkrItems.size, pkrIdx)
+        var optionalTimePickerStateBegin : OptionalTimePickerState = OptionalTimePickerState()
+        var optionalTimePickerStateEnd : OptionalTimePickerState = OptionalTimePickerState()
+        var islrVibrationLevel = 255
+        var islrVibrationDuration = 375L
         var mysvcIntent: Intent = Intent()
+
+        fun init(ctx : Context?)
+        {
+            if(ctx != null) {
+                sharedPref = ctx.getSharedPreferences("myPref", Context.MODE_PRIVATE)
+                pkrIdx = sharedPref!!.getInt("pkrIdx", 12)
+                pkrState = PickerState(pkrItems.size, pkrIdx)
+
+                optionalTimePickerStateBegin = OptionalTimePickerState(
+                    sharedPref!!.getInt("tpkrBegH", 4),
+                    sharedPref!!.getInt("tpkrBegM", 0),
+                    sharedPref!!.getBoolean("tpkrBegEnabled", false)
+                )
+                optionalTimePickerStateEnd = OptionalTimePickerState(
+                    sharedPref!!.getInt("tpkrEndH", 7),
+                    sharedPref!!.getInt("tpkrEndM", 0),
+                    sharedPref!!.getBoolean("tpkrEndEnabled", false)
+                )
+
+                islrVibrationLevel = sharedPref!!.getInt("islrVibrationLevel", 255)
+                islrVibrationDuration = sharedPref!!.getLong("islrVibrationDuration", 375L)
+
+                mysvcIntent.setClass(ctx, MyService::class.java)
+            }
+        }
+
+        fun save() {
+            if(sharedPref != null) {
+                with(sharedPref!!.edit())
+                {
+                    putInt("pkrIdx", pkrState!!.selectedOption)
+
+                    putInt(
+                        "tpkrBegH",
+                        optionalTimePickerStateBegin!!.timePickerState.hourState.selectedOption
+                    )
+                    putInt(
+                        "tpkrBegM",
+                        optionalTimePickerStateBegin!!.timePickerState.minuteState.selectedOption
+                    )
+                    putBoolean("tpkrBegEnabled", optionalTimePickerStateBegin!!.tpkrEnabled)
+
+                    putInt(
+                        "tpkrEndH",
+                        optionalTimePickerStateEnd!!.timePickerState.hourState.selectedOption
+                    )
+                    putInt(
+                        "tpkrEndM",
+                        optionalTimePickerStateEnd!!.timePickerState.minuteState.selectedOption
+                    )
+                    putBoolean("tpkrEndEnabled", optionalTimePickerStateEnd!!.tpkrEnabled)
+
+                    putInt("islrVibrationLevel", islrVibrationLevel)
+                    putLong("islrVibrationDuration", islrVibrationDuration)
+                    apply()
+                }
+            }
+        }
     }
 }
 
 class MainActivity : ComponentActivity() {
-    var sharedPref: SharedPreferences ?= null
-    var pkrState: PickerState ?= null
-    var optionalTimePickerStateBegin: OptionalTimePickerState ?= null
-    var optionalTimePickerStateEnd: OptionalTimePickerState ?= null
-    var islrVibrationLevel: Int by mutableStateOf(0)
-    var islrVibrationDuration: Long by mutableStateOf(0)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
@@ -154,23 +213,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause()
     {
-        //super.onPause();
-        with(sharedPref!!.edit())
-        {
-            putInt("pkrIdx", pkrState!!.selectedOption)
-
-            putInt("tpkrBegH", optionalTimePickerStateBegin!!.timePickerState.hourState.selectedOption)
-            putInt("tpkrBegM", optionalTimePickerStateBegin!!.timePickerState.minuteState.selectedOption)
-            putBoolean("tpkrBegEnabled", optionalTimePickerStateBegin!!.tpkrEnabled)
-
-            putInt("tpkrEndH", optionalTimePickerStateEnd!!.timePickerState.hourState.selectedOption)
-            putInt("tpkrEndM", optionalTimePickerStateEnd!!.timePickerState.minuteState.selectedOption)
-            putBoolean("tpkrEndEnabled", optionalTimePickerStateEnd!!.tpkrEnabled)
-
-            putInt("islrVibrationLevel", islrVibrationLevel)
-            putLong("islrVibrationDuration", islrVibrationDuration)
-            apply()
-        }
+        Core.save();
         super.onPause();
     }
 }
@@ -178,16 +221,10 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun WearApp(greetingName: String, ctx: Context?) {
-    val sharedPref = ctx?.getSharedPreferences("myPref", Context.MODE_PRIVATE) ?: null
     val btcap = listOf("❚❚", "▶")
-    val df = DecimalFormat("#.##")
-    val pkrItems = List(101) { df.format(it) }
-    val pkrIdx = sharedPref?.getInt("pkrIdx", 12) ?: 12
-    val pkrState = rememberPickerState(pkrItems.size, pkrIdx)
     var pkrEnabled by remember { mutableStateOf(true) }
-    val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
+    val contentDescription by remember { derivedStateOf { "${Core.pkrState.selectedOption + 1}" } }
     var btnChecked : MutableState<Boolean> = Core.btnChecked
-    //val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
     val myAlarmIntent: Intent by lazy { Intent(ctx, AlarmReceiver::class.java) }
     var piAlarm : PendingIntent? = null
 
@@ -197,9 +234,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
 
     val listState = rememberScalingLazyListState()
 
-    if (ctx != null) {
-        Core.mysvcIntent.setClass(ctx, MyService::class.java)
-    }
+    Core.init(ctx)
 
     //var expandedState by remember { mutableStateOf(false) }
     // begin
@@ -208,7 +243,6 @@ fun WearApp(greetingName: String, ctx: Context?) {
         initiallySelectedOptionH: Int,
         initiallySelectedOptionM: Int
     ) = remember { TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM) }
-    */
 
     @Composable
     fun rememberOptionalTimePickerState(
@@ -216,31 +250,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
         initiallySelectedOptionM: Int,
         initialEnabled: Boolean
     ) = remember { OptionalTimePickerState(initiallySelectedOptionH, initiallySelectedOptionM, initialEnabled) }
-
-    var optionalTimePickerStateBegin = rememberOptionalTimePickerState(
-        sharedPref!!.getInt("tpkrBegH", 4),
-        sharedPref!!.getInt("tpkrBegM", 0),
-        sharedPref!!.getBoolean("tpkrBegEnabled", false)
-    )
-    var optionalTimePickerStateEnd = rememberOptionalTimePickerState(
-        sharedPref!!.getInt("tpkrEndH", 7),
-        sharedPref!!.getInt("tpkrEndM", 0),
-        sharedPref!!.getBoolean("tpkrEndEnabled", false)
-    )
-
-    var islrVibrationLevel by remember { mutableStateOf(sharedPref!!.getInt("islrVibrationLevel", 255)) }
-    var islrVibrationDuration by remember { mutableStateOf(sharedPref.getLong("islrVibrationDuration", 375)) }
-
-    if(ctx != null) {
-        var activity = ctx as MainActivity
-
-        activity.sharedPref = sharedPref
-        activity.pkrState = pkrState
-        activity.optionalTimePickerStateBegin = optionalTimePickerStateBegin
-        activity.optionalTimePickerStateEnd = optionalTimePickerStateEnd
-        activity.islrVibrationLevel = islrVibrationLevel
-        activity.islrVibrationDuration = islrVibrationDuration
-    }
+    */
 
     PhasigTheme {
         val state = rememberSwipeToDismissBoxState()
@@ -386,7 +396,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                         .fillMaxWidth()
                                 ) {
                                     item {
-                                        ExpandableCard(title = "Threshold: ${pkrItems[pkrState.selectedOption]}") {
+                                        ExpandableCard(title = "Threshold: ${Core.pkrItems[Core.pkrState.selectedOption]}") {
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 verticalAlignment = Alignment.CenterVertically,
@@ -397,13 +407,13 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                         64.dp,
                                                         100.dp
                                                     ),
-                                                    state = pkrState,
+                                                    state = Core.pkrState,
                                                     contentDescription = contentDescription,
                                                     userScrollEnabled = pkrEnabled,
                                                 ) {
                                                     Text(
                                                         //text = "%02d".format(pkrItems[it]),
-                                                        text = pkrItems[it],
+                                                        text = Core.pkrItems[it],
                                                         fontSize = 32.sp
                                                     )
                                                 }
@@ -412,7 +422,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                     }
 
                                     item {
-                                        with(optionalTimePickerStateBegin) {
+                                        with(Core.optionalTimePickerStateBegin) {
                                             ExpandableCard(
                                                 title = "begin at " +
                                                         if (tpkrEnabled) {
@@ -428,14 +438,14 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                             ) {
                                                 OptionalTimePicker(
                                                     "Use time:",
-                                                    optionalTimePickerStateBegin
+                                                    Core.optionalTimePickerStateBegin
                                                 )
                                             }
                                         }
                                     }
 
                                     item {
-                                        with(optionalTimePickerStateEnd) {
+                                        with(Core.optionalTimePickerStateEnd) {
                                             ExpandableCard(
                                                 title = "end at " +
                                                         if (tpkrEnabled) {
@@ -451,7 +461,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                             ) {
                                                 OptionalTimePicker(
                                                     "Use time:",
-                                                    optionalTimePickerStateEnd
+                                                    Core.optionalTimePickerStateEnd
                                                 )
                                             }
                                         }
@@ -468,9 +478,9 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 )
 
                                                 InlineSlider(
-                                                    value = islrVibrationLevel.toFloat(),
+                                                    value = Core.islrVibrationLevel as Float,
                                                     onValueChange = {
-                                                        islrVibrationLevel = it.toInt()
+                                                        Core.islrVibrationLevel = it as Int
                                                     },
                                                     increaseIcon = {
                                                         Icon(
@@ -497,10 +507,9 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 )
 
                                                 InlineSlider(
-                                                    value = islrVibrationDuration.toFloat(),
+                                                    value = Core.islrVibrationDuration.toFloat(),
                                                     onValueChange = {
-                                                        islrVibrationDuration =
-                                                            it.toLong()
+                                                        Core.islrVibrationDuration = it.toLong()
                                                     },
                                                     increaseIcon = {
                                                         Icon(
@@ -526,7 +535,6 @@ fun WearApp(greetingName: String, ctx: Context?) {
                         }
 
                         0 -> {
-                            //if (selectedPage == 0) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -547,16 +555,17 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                         } else { // play
                                             pkrEnabled = false;
                                             val threshold =
-                                                pkrItems[pkrState.selectedOption].toDouble()
+                                                Core.pkrItems[Core.pkrState.selectedOption]
+                                                    .toDouble()
 
                                             Core.mysvcIntent.putExtra("threshold", threshold)
                                             Core.mysvcIntent.putExtra(
                                                 "islrVibrationLevel",
-                                                islrVibrationLevel
+                                                Core.islrVibrationLevel
                                             )
                                             Core.mysvcIntent.putExtra(
                                                 "islrVibrationDuration",
-                                                islrVibrationDuration
+                                                Core.islrVibrationDuration
                                             )
                                             Core.mysvcIntent.setAction("apply")
 
@@ -593,7 +602,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 return delayMsec.toLong()
                                             }
 
-                                            with(optionalTimePickerStateBegin!!)
+                                            with(Core.optionalTimePickerStateBegin!!)
                                             {
                                                 if (tpkrEnabled) {
                                                     if (ctx != null) {
@@ -636,7 +645,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 }
                                             }
 
-                                            with(optionalTimePickerStateEnd!!)
+                                            with(Core.optionalTimePickerStateEnd!!)
                                             {
                                                 if (tpkrEnabled) {
                                                     if (ctx != null) {
