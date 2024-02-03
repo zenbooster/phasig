@@ -7,15 +7,14 @@
 package com.example.phasig.presentation
 
 //import com.example.phasig.R
+
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.os.SystemClock
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -36,6 +35,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,13 +69,13 @@ import androidx.wear.compose.material.PickerState
 import androidx.wear.compose.material.SwipeToDismissBox
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.rememberPickerState
-import com.example.phasig.MyService
 import com.example.phasig.presentation.theme.PhasigTheme
 import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
 import java.util.Calendar
-import java.util.GregorianCalendar
 
+
+//import java.util.GregorianCalendar
 
 class TimePickerState(
     initiallySelectedOptionH: Int = 0,
@@ -112,14 +112,92 @@ class OptionalTimePickerState(
     }
 }
 
-class MainActivity : ComponentActivity() {
-    var sharedPref: SharedPreferences ?= null
-    var pkrState: PickerState ?= null
-    var optionalTimePickerStateBegin: OptionalTimePickerState ?= null
-    var optionalTimePickerStateEnd: OptionalTimePickerState ?= null
-    var islrVibrationLevel: Int by mutableStateOf(0)
-    var islrVibrationDuration: Long by mutableStateOf(0)
+class AlarmReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val my_intent = Intent(context, MainActivity::class.java)
+        // попробовать FLAG_ACTIVITY_RESET_TASK_IF_NEEDED вместо FLAG_ACTIVITY_SINGLE_TOP
+        my_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) // You need this if starting
+        context.startActivity(my_intent)
 
+        context.startForegroundService(Core.mysvcIntent);
+    }
+}
+
+class Core {
+    companion object {
+        var sharedPref : SharedPreferences? = null
+        val df = DecimalFormat("#.##")
+        var btnChecked = mutableStateOf(true)
+        var pkrIdx : Int = 12
+        val pkrItems = List(101) { df.format(it) }
+        var pkrState : PickerState = PickerState(pkrItems.size, pkrIdx)
+        var optionalTimePickerStateBegin : OptionalTimePickerState = OptionalTimePickerState()
+        var optionalTimePickerStateEnd : OptionalTimePickerState = OptionalTimePickerState()
+        var islrVibrationLevel = 255
+        var islrVibrationDuration = 375L
+        var mysvcIntent: Intent = Intent()
+
+        fun init(ctx : Context?)
+        {
+            if(ctx != null) {
+                sharedPref = ctx.getSharedPreferences("myPref", Context.MODE_PRIVATE)
+                pkrIdx = sharedPref!!.getInt("pkrIdx", 12)
+                pkrState = PickerState(pkrItems.size, pkrIdx)
+
+                optionalTimePickerStateBegin = OptionalTimePickerState(
+                    sharedPref!!.getInt("tpkrBegH", 4),
+                    sharedPref!!.getInt("tpkrBegM", 0),
+                    sharedPref!!.getBoolean("tpkrBegEnabled", false)
+                )
+                optionalTimePickerStateEnd = OptionalTimePickerState(
+                    sharedPref!!.getInt("tpkrEndH", 7),
+                    sharedPref!!.getInt("tpkrEndM", 0),
+                    sharedPref!!.getBoolean("tpkrEndEnabled", false)
+                )
+
+                islrVibrationLevel = sharedPref!!.getInt("islrVibrationLevel", 255)
+                islrVibrationDuration = sharedPref!!.getLong("islrVibrationDuration", 375L)
+
+                mysvcIntent.setClass(ctx, MyService::class.java)
+            }
+        }
+
+        fun save() {
+            if(sharedPref != null) {
+                with(sharedPref!!.edit())
+                {
+                    putInt("pkrIdx", pkrState!!.selectedOption)
+
+                    putInt(
+                        "tpkrBegH",
+                        optionalTimePickerStateBegin!!.timePickerState.hourState.selectedOption
+                    )
+                    putInt(
+                        "tpkrBegM",
+                        optionalTimePickerStateBegin!!.timePickerState.minuteState.selectedOption
+                    )
+                    putBoolean("tpkrBegEnabled", optionalTimePickerStateBegin!!.tpkrEnabled)
+
+                    putInt(
+                        "tpkrEndH",
+                        optionalTimePickerStateEnd!!.timePickerState.hourState.selectedOption
+                    )
+                    putInt(
+                        "tpkrEndM",
+                        optionalTimePickerStateEnd!!.timePickerState.minuteState.selectedOption
+                    )
+                    putBoolean("tpkrEndEnabled", optionalTimePickerStateEnd!!.tpkrEnabled)
+
+                    putInt("islrVibrationLevel", islrVibrationLevel)
+                    putLong("islrVibrationDuration", islrVibrationDuration)
+                    apply()
+                }
+            }
+        }
+    }
+}
+
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
 
@@ -135,23 +213,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause()
     {
-        //super.onPause();
-        with(sharedPref!!.edit())
-        {
-            putInt("pkrIdx", pkrState!!.selectedOption)
-
-            putInt("tpkrBegH", optionalTimePickerStateBegin!!.timePickerState.hourState.selectedOption)
-            putInt("tpkrBegM", optionalTimePickerStateBegin!!.timePickerState.minuteState.selectedOption)
-            putBoolean("tpkrBegEnabled", optionalTimePickerStateBegin!!.tpkrEnabled)
-
-            putInt("tpkrEndH", optionalTimePickerStateEnd!!.timePickerState.hourState.selectedOption)
-            putInt("tpkrEndM", optionalTimePickerStateEnd!!.timePickerState.minuteState.selectedOption)
-            putBoolean("tpkrEndEnabled", optionalTimePickerStateEnd!!.tpkrEnabled)
-
-            putInt("islrVibrationLevel", islrVibrationLevel)
-            putLong("islrVibrationDuration", islrVibrationDuration)
-            apply()
-        }
+        Core.save();
         super.onPause();
     }
 }
@@ -159,21 +221,24 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun WearApp(greetingName: String, ctx: Context?) {
-    val sharedPref = ctx?.getSharedPreferences("myPref", Context.MODE_PRIVATE) ?: null
     val btcap = listOf("❚❚", "▶")
-    val df = DecimalFormat("#.##")
-    val pkrItems = List(101) { df.format(it) }
-    val pkrIdx = sharedPref?.getInt("pkrIdx", 12) ?: 12
-    val pkrState = rememberPickerState(pkrItems.size, pkrIdx)
     var pkrEnabled by remember { mutableStateOf(true) }
-    val contentDescription by remember { derivedStateOf { "${pkrState.selectedOption + 1}" } }
-    var btnChecked by remember { mutableStateOf(true) }
-    val mysvcIntent: Intent by lazy { Intent(ctx, MyService::class.java) }
+    val contentDescription by remember { derivedStateOf { "${Core.pkrState.selectedOption + 1}" } }
+    var btnChecked : MutableState<Boolean> = Core.btnChecked
+    val myAlarmIntent: Intent by lazy { Intent(ctx, AlarmReceiver::class.java) }
+    var piAlarm : PendingIntent? = null
+
+    var alarmManager: AlarmManager? = null
+    var piMySvc: PendingIntent? = null
+    var piMySvcK: PendingIntent? = null
 
     val listState = rememberScalingLazyListState()
+
+    Core.init(ctx)
+
     //var expandedState by remember { mutableStateOf(false) }
     // begin
-    @Composable
+    /*@Composable
     fun rememberTimePickerState(
         initiallySelectedOptionH: Int,
         initiallySelectedOptionM: Int
@@ -185,31 +250,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
         initiallySelectedOptionM: Int,
         initialEnabled: Boolean
     ) = remember { OptionalTimePickerState(initiallySelectedOptionH, initiallySelectedOptionM, initialEnabled) }
-
-    var optionalTimePickerStateBegin = rememberOptionalTimePickerState(
-        sharedPref!!.getInt("tpkrBegH", 4),
-        sharedPref!!.getInt("tpkrBegM", 0),
-        sharedPref!!.getBoolean("tpkrBegEnabled", false)
-    )
-    var optionalTimePickerStateEnd = rememberOptionalTimePickerState(
-        sharedPref!!.getInt("tpkrEndH", 7),
-        sharedPref!!.getInt("tpkrEndM", 0),
-        sharedPref!!.getBoolean("tpkrEndEnabled", false)
-    )
-
-    var islrVibrationLevel by remember { mutableStateOf(sharedPref!!.getInt("islrVibrationLevel", 255)) }
-    var islrVibrationDuration by remember { mutableStateOf(sharedPref.getLong("islrVibrationDuration", 375)) }
-
-    if(ctx != null) {
-        val activity = ctx as MainActivity
-
-        activity.sharedPref = sharedPref
-        activity.pkrState = pkrState
-        activity.optionalTimePickerStateBegin = optionalTimePickerStateBegin
-        activity.optionalTimePickerStateEnd = optionalTimePickerStateEnd
-        activity.islrVibrationLevel = islrVibrationLevel
-        activity.islrVibrationDuration = islrVibrationDuration
-    }
+    */
 
     PhasigTheme {
         val state = rememberSwipeToDismissBoxState()
@@ -355,7 +396,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                         .fillMaxWidth()
                                 ) {
                                     item {
-                                        ExpandableCard(title = "Threshold: ${pkrItems[pkrState.selectedOption]}") {
+                                        ExpandableCard(title = "Threshold: ${Core.pkrItems[Core.pkrState.selectedOption]}") {
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 verticalAlignment = Alignment.CenterVertically,
@@ -366,13 +407,13 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                         64.dp,
                                                         100.dp
                                                     ),
-                                                    state = pkrState,
+                                                    state = Core.pkrState,
                                                     contentDescription = contentDescription,
                                                     userScrollEnabled = pkrEnabled,
                                                 ) {
                                                     Text(
                                                         //text = "%02d".format(pkrItems[it]),
-                                                        text = pkrItems[it],
+                                                        text = Core.pkrItems[it],
                                                         fontSize = 32.sp
                                                     )
                                                 }
@@ -381,7 +422,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                     }
 
                                     item {
-                                        with(optionalTimePickerStateBegin) {
+                                        with(Core.optionalTimePickerStateBegin) {
                                             ExpandableCard(
                                                 title = "begin at " +
                                                         if (tpkrEnabled) {
@@ -397,14 +438,14 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                             ) {
                                                 OptionalTimePicker(
                                                     "Use time:",
-                                                    optionalTimePickerStateBegin
+                                                    Core.optionalTimePickerStateBegin
                                                 )
                                             }
                                         }
                                     }
 
                                     item {
-                                        with(optionalTimePickerStateEnd) {
+                                        with(Core.optionalTimePickerStateEnd) {
                                             ExpandableCard(
                                                 title = "end at " +
                                                         if (tpkrEnabled) {
@@ -420,7 +461,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                             ) {
                                                 OptionalTimePicker(
                                                     "Use time:",
-                                                    optionalTimePickerStateEnd
+                                                    Core.optionalTimePickerStateEnd
                                                 )
                                             }
                                         }
@@ -437,9 +478,9 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 )
 
                                                 InlineSlider(
-                                                    value = islrVibrationLevel.toFloat(),
+                                                    value = Core.islrVibrationLevel as Float,
                                                     onValueChange = {
-                                                        islrVibrationLevel = it.toInt()
+                                                        Core.islrVibrationLevel = it as Int
                                                     },
                                                     increaseIcon = {
                                                         Icon(
@@ -466,10 +507,9 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 )
 
                                                 InlineSlider(
-                                                    value = islrVibrationDuration.toFloat(),
+                                                    value = Core.islrVibrationDuration.toFloat(),
                                                     onValueChange = {
-                                                        islrVibrationDuration =
-                                                            it.toLong()
+                                                        Core.islrVibrationDuration = it.toLong()
                                                     },
                                                     increaseIcon = {
                                                         Icon(
@@ -495,7 +535,6 @@ fun WearApp(greetingName: String, ctx: Context?) {
                         }
 
                         0 -> {
-                            //if (selectedPage == 0) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -504,135 +543,151 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                 Button(
                                     enabled = true,
                                     onClick = {
-                                        val tokenSFS = 0
-                                        val tokenSS = 1
 
-                                        btnChecked = !btnChecked
+                                        btnChecked.value = !btnChecked.value
 
-                                        if (btnChecked) { // pause
-                                            Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
-                                                tokenSS
-                                            );
-                                            Handler(Looper.getMainLooper()).removeCallbacksAndMessages(
-                                                tokenSFS
-                                            );
+                                        if (btnChecked.value) { // pause
+                                            piMySvcK?.let { alarmManager?.cancel(it) }
+                                            //piMySvc?.let { alarmManager?.cancel(it) }
+                                            piAlarm?.let { alarmManager?.cancel(it) }
                                             pkrEnabled = true
-                                            ctx?.stopService(mysvcIntent)
+                                            ctx?.stopService(Core.mysvcIntent)
                                         } else { // play
                                             pkrEnabled = false;
                                             val threshold =
-                                                pkrItems[pkrState.selectedOption].toDouble()
+                                                Core.pkrItems[Core.pkrState.selectedOption]
+                                                    .toDouble()
 
-                                            mysvcIntent.putExtra("threshold", threshold)
-                                            mysvcIntent.putExtra(
+                                            Core.mysvcIntent.putExtra("threshold", threshold)
+                                            Core.mysvcIntent.putExtra(
                                                 "islrVibrationLevel",
-                                                islrVibrationLevel
+                                                Core.islrVibrationLevel
                                             )
-                                            mysvcIntent.putExtra(
+                                            Core.mysvcIntent.putExtra(
                                                 "islrVibrationDuration",
-                                                islrVibrationDuration
+                                                Core.islrVibrationDuration
                                             )
-                                            mysvcIntent.setAction("apply")
+                                            Core.mysvcIntent.setAction("apply")
 
                                             fun StartMainWork()
                                             {
                                                 ctx?.startForegroundService(
-                                                    mysvcIntent
+                                                    Core.mysvcIntent
                                                 )
                                             }
 
                                             fun StopMainWork()
                                             {
-                                                ctx?.stopService(mysvcIntent)
+                                                ctx?.stopService(Core.mysvcIntent)
                                             }
 
-                                            fun GetDelayMsecFromNow(
+                                            fun GetDelayMsecFromTime(
                                                 h: Int,
                                                 m: Int
                                             ): Long {
-                                                val cal = GregorianCalendar()
-                                                val om =
-                                                    (cal[Calendar.HOUR] * 60) + cal[Calendar.MINUTE]
-                                                var nm = (h * 60) + m
+                                                val cal = Calendar.getInstance()
+                                                val ch = cal[Calendar.HOUR_OF_DAY]
+                                                val cm = cal[Calendar.MINUTE]
+                                                val cs = cal[Calendar.SECOND]
+                                                val cmin = (ch * 60) + cm
+                                                var nmin = (h * 60) + m
 
-                                                if (nm < om) {
-                                                    nm += 24 * 60
+                                                if (nmin < cmin) {
+                                                    nmin += 24 * 60
                                                 }
 
                                                 val delayMsec =
-                                                    ((nm - om) * 60 - cal[Calendar.SECOND]) * 1000
+                                                    ((nmin - cmin) * 60 - cs) * 1000
 
                                                 return delayMsec.toLong()
                                             }
 
-                                            with(optionalTimePickerStateBegin!!)
+                                            with(Core.optionalTimePickerStateBegin!!)
                                             {
-                                                val delay = GetDelayMsecFromNow(
-                                                    timePickerState.hourState.selectedOption,
-                                                    timePickerState.minuteState.selectedOption
-                                                )
-
                                                 if (tpkrEnabled) {
-                                                    /*val startServiceIntent: Intent = Intent(
-                                                        ctx,
-                                                        MyService::class.java
-                                                    )*/
-                                                    val contentIntent = PendingIntent.getService(
-                                                        ctx,
-                                                        0,
-                                                        mysvcIntent, //startServiceIntent,
-                                                        PendingIntent.FLAG_CANCEL_CURRENT or
-                                                                PendingIntent.FLAG_IMMUTABLE
-                                                    )
-                                                    val alarmManager = ctx?.getSystemService(
-                                                        Context.ALARM_SERVICE
-                                                    ) as AlarmManager
-
-                                                    alarmManager.set(
-                                                        AlarmManager.RTC_WAKEUP,
-                                                        SystemClock.currentThreadTimeMillis() + delay,
-                                                        contentIntent
-                                                    );
-
-                                                    /*Handler(Looper.getMainLooper()).postDelayed(
-                                                        {
-                                                            //Do something at begin time
-                                                            /*ctx?.startForegroundService(
-                                                                mysvcIntent
-                                                            )*/
-                                                            StartMainWork()
-                                                        },
-                                                        tokenSFS,
-                                                        GetDelayMsecFromNow(
+                                                    if (ctx != null) {
+                                                        val delay = GetDelayMsecFromTime(
                                                             timePickerState.hourState.selectedOption,
                                                             timePickerState.minuteState.selectedOption
                                                         )
-                                                    )*/
+
+                                                        alarmManager = ctx?.getSystemService(
+                                                            Context.ALARM_SERVICE
+                                                        ) as AlarmManager
+
+                                                        /*alarmManager?.setExactAndAllowWhileIdle(
+                                                            AlarmManager.RTC_WAKEUP,
+                                                            System.currentTimeMillis() + delay,
+                                                            pi
+                                                        );*/
+
+                                                        var pia = PendingIntent.getBroadcast(
+                                                            ctx,
+                                                            0,
+                                                            myAlarmIntent,
+                                                            PendingIntent.FLAG_CANCEL_CURRENT or
+                                                                    PendingIntent.FLAG_IMMUTABLE
+                                                        )
+
+                                                        alarmManager?.setAlarmClock(
+                                                            AlarmManager.AlarmClockInfo(
+                                                                System.currentTimeMillis() + delay,
+                                                                null
+                                                            ), pia)
+                                                        piAlarm = pia
+                                                        //piMySvc = pi
+                                                    }
                                                 } else {
                                                     /*ctx?.startForegroundService(
-                                                        mysvcIntent
+                                                        Core.mysvcIntent
                                                     )*/
                                                     StartMainWork()
                                                 }
                                             }
 
-                                            with(optionalTimePickerStateEnd!!)
+                                            with(Core.optionalTimePickerStateEnd!!)
                                             {
                                                 if (tpkrEnabled) {
-                                                    Handler(Looper.getMainLooper()).postDelayed(
-                                                        {
-                                                            //Do something at end time
-                                                            btnChecked = !btnChecked
-                                                            pkrEnabled = true
-                                                            //ctx?.stopService(mysvcIntent)
-                                                            StopMainWork()
-                                                        },
-                                                        tokenSS,
-                                                        GetDelayMsecFromNow(
+                                                    if (ctx != null) {
+                                                        val delayEnd = GetDelayMsecFromTime(
                                                             timePickerState.hourState.selectedOption,
                                                             timePickerState.minuteState.selectedOption
                                                         )
-                                                    )
+
+                                                        val mysvcKIntent: Intent = Intent(
+                                                            ctx,
+                                                            MyServiceKiller::class.java
+                                                        )
+                                                        val actIntent = Intent(
+                                                            ctx, MainActivity::class.java
+                                                        )
+                                                        mysvcKIntent.putExtra("victim", Core.mysvcIntent)
+                                                        mysvcKIntent.putExtra("actIntent", actIntent)
+                                                        mysvcKIntent.setAction("apply")
+
+                                                        var pi = PendingIntent.getService(
+                                                            ctx,
+                                                            0,
+                                                            mysvcKIntent,
+                                                            PendingIntent.FLAG_CANCEL_CURRENT or
+                                                                    PendingIntent.FLAG_IMMUTABLE
+                                                        )
+                                                        alarmManager = ctx?.getSystemService(
+                                                            Context.ALARM_SERVICE
+                                                        ) as AlarmManager
+
+                                                        alarmManager?.setExactAndAllowWhileIdle(
+                                                            AlarmManager.RTC_WAKEUP,
+                                                            System.currentTimeMillis() + delayEnd,
+                                                            pi
+                                                        );
+                                                        /*alarmManager?.setAlarmClock(
+                                                            AlarmManager.AlarmClockInfo(
+                                                                System.currentTimeMillis() + delayEnd,
+                                                                null
+                                                            ), pi)*/
+                                                        piMySvcK = pi
+                                                    }
                                                 }
                                             }
                                         }
@@ -641,7 +696,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                         .align(Alignment.Center)
                                         .padding(top = 1.dp)
                                 ) {
-                                    Text("${btcap[if (btnChecked) 1 else 0]}")
+                                    Text("${btcap[if (btnChecked.value) 1 else 0]}")
                                 }
                             }
                         }

@@ -1,5 +1,6 @@
-package com.example.phasig
+package com.example.phasig.presentation
 
+import android.app.AlarmManager
 import android.app.Service
 import android.app.Notification
 import android.app.NotificationManager
@@ -17,10 +18,11 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import java.lang.Math.sqrt
 import android.graphics.Color
-import com.example.phasig.presentation.MainActivity
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
-import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+import android.content.Context
+import android.os.PowerManager
+import com.example.phasig.R
 
 class MyService : Service(), SensorEventListener {
     private var mSensorManager : SensorManager ?= null
@@ -29,6 +31,8 @@ class MyService : Service(), SensorEventListener {
     public var threshold : Double = 0.0;
     public var islrVibrationLevel : Int = 0
     public var islrVibrationDuration : Long = 0
+
+    var wakeLock: PowerManager.WakeLock? = null
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int)
     {
@@ -109,6 +113,7 @@ class MyService : Service(), SensorEventListener {
     override fun onDestroy()
     {
         mSensorManager!!.unregisterListener(this)
+        wakeLock!!.release()
         Toast.makeText(this, "service destroyed", Toast.LENGTH_SHORT).show()
     }
 
@@ -125,6 +130,12 @@ class MyService : Service(), SensorEventListener {
             islrVibrationLevel = intent.getExtras()!!.getInt("islrVibrationLevel")
             islrVibrationDuration = intent.getExtras()!!.getLong("islrVibrationDuration")
         }
+
+        wakeLock = (getSystemService(POWER_SERVICE) as PowerManager).run {
+                newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "phasig::MyWakelockTag").apply {
+                    acquire()
+                }
+            }
 
         mSensorManager!!.registerListener(this,mAccelerometer,
             SensorManager.SENSOR_DELAY_GAME)
