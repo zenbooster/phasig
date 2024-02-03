@@ -7,6 +7,7 @@
 package com.example.phasig.presentation
 
 //import com.example.phasig.R
+import android.app.ActivityManager
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -14,7 +15,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -23,13 +23,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
@@ -44,7 +41,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,7 +52,6 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.foundation.rememberSwipeToDismissBoxState
 import androidx.wear.compose.material.Button
-import androidx.wear.compose.material.Checkbox
 import androidx.wear.compose.material.HorizontalPageIndicator
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.InlineSlider
@@ -73,13 +68,11 @@ import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
 import java.util.Calendar
 
+
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val my_intent = Intent(context, MainActivity::class.java)
-        // попробовать FLAG_ACTIVITY_RESET_TASK_IF_NEEDED вместо FLAG_ACTIVITY_SINGLE_TOP
-        //my_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) // You need this if starting
-        my_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED) // You need this if starting
-        context.startActivity(my_intent)
+        var am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        am.moveTaskToFront(Core.taskId, 0)
 
         context.startForegroundService(Core.mysvcIntent)
     }
@@ -87,6 +80,7 @@ class AlarmReceiver : BroadcastReceiver() {
 
 class Core {
     companion object {
+        var taskId : Int = 0
         var sharedPref : SharedPreferences? = null
         val df = DecimalFormat("#.##")
         var btnChecked = mutableStateOf(true)
@@ -164,6 +158,8 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
+
+        Core.taskId = taskId
 
         setTheme(android.R.style.Theme_DeviceDefault)
 
@@ -409,7 +405,6 @@ fun WearApp(ctx: Context?) {
 
                                         if (btnChecked.value) { // pause
                                             piMySvcK?.let { alarmManager?.cancel(it) }
-                                            //piMySvc?.let { alarmManager?.cancel(it) }
                                             piAlarm?.let { alarmManager?.cancel(it) }
                                             pkrEnabled = true
                                             StopMainWork()
