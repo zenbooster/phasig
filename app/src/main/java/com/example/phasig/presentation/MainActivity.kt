@@ -410,20 +410,6 @@ fun WearApp(ctx: Context?) {
                                             StopMainWork()
                                         } else { // play
                                             pkrEnabled = false
-                                            val threshold =
-                                                Core.pkrItems[Core.pkrState.selectedOption]
-                                                    .toDouble()
-
-                                            Core.mysvcIntent.putExtra("threshold", threshold)
-                                            Core.mysvcIntent.putExtra(
-                                                "islrVibrationLevel",
-                                                Core.islrVibrationLevel
-                                            )
-                                            Core.mysvcIntent.putExtra(
-                                                "islrVibrationDuration",
-                                                Core.islrVibrationDuration
-                                            )
-                                            Core.mysvcIntent.setAction("apply")
 
                                             fun GetDelayMsecFromTime(
                                                 h: Int,

@@ -29,8 +29,6 @@ class MyService : Service(), SensorEventListener {
     private var mAccelerometer : Sensor ?= null
 
     public var threshold : Double = 0.0;
-    public var islrVibrationLevel : Int = 0
-    public var islrVibrationDuration : Long = 0
 
     var wakeLock: PowerManager.WakeLock? = null
 
@@ -52,7 +50,7 @@ class MyService : Service(), SensorEventListener {
                 val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
                 val vibrationEffect1: VibrationEffect
                 vibrationEffect1 =
-                    VibrationEffect.createOneShot(islrVibrationDuration, islrVibrationLevel)
+                    VibrationEffect.createOneShot(Core.islrVibrationDuration, Core.islrVibrationLevel)
 
                 // it is safe to cancel other vibrations currently taking place
                 vibrator.cancel()
@@ -124,12 +122,7 @@ class MyService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        if (intent.getAction().equals("apply"))
-        {
-            threshold = intent.getExtras()!!.getDouble("threshold")
-            islrVibrationLevel = intent.getExtras()!!.getInt("islrVibrationLevel")
-            islrVibrationDuration = intent.getExtras()!!.getLong("islrVibrationDuration")
-        }
+        threshold = Core.pkrItems[Core.pkrState.selectedOption].toDouble()
 
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager).run {
                 newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "phasig::MyWakelockTag").apply {
