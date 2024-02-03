@@ -7,7 +7,6 @@
 package com.example.phasig.presentation
 
 //import com.example.phasig.R
-
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -68,58 +67,20 @@ import androidx.wear.compose.material.Picker
 import androidx.wear.compose.material.PickerState
 import androidx.wear.compose.material.SwipeToDismissBox
 import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.rememberPickerState
 import com.example.phasig.presentation.theme.PhasigTheme
 import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
 import java.util.Calendar
 
-
-//import java.util.GregorianCalendar
-
-class TimePickerState(
-    initiallySelectedOptionH: Int = 0,
-    initiallySelectedOptionM: Int = 0
-) {
-    val hourState: PickerState
-    val minuteState: PickerState
-    var selectedColumn by mutableStateOf(0)
-
-    init
-    {
-        hourState = PickerState(
-            initialNumberOfOptions = 24,
-            initiallySelectedOption = initiallySelectedOptionH
-        )
-        minuteState = PickerState(
-            initialNumberOfOptions = 60,
-            initiallySelectedOption = initiallySelectedOptionM
-        )
-    }
-}
-
-class OptionalTimePickerState(
-    initiallySelectedOptionH: Int = 0,
-    initiallySelectedOptionM: Int = 0,
-    initialEnabled: Boolean = false
-)
-{
-    val timePickerState: TimePickerState
-    var tpkrEnabled by mutableStateOf(initialEnabled)
-
-    init {
-        timePickerState = TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM)
-    }
-}
-
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val my_intent = Intent(context, MainActivity::class.java)
         // попробовать FLAG_ACTIVITY_RESET_TASK_IF_NEEDED вместо FLAG_ACTIVITY_SINGLE_TOP
-        my_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) // You need this if starting
+        //my_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP) // You need this if starting
+        my_intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED) // You need this if starting
         context.startActivity(my_intent)
 
-        context.startForegroundService(Core.mysvcIntent);
+        context.startForegroundService(Core.mysvcIntent)
     }
 }
 
@@ -166,27 +127,27 @@ class Core {
             if(sharedPref != null) {
                 with(sharedPref!!.edit())
                 {
-                    putInt("pkrIdx", pkrState!!.selectedOption)
+                    putInt("pkrIdx", pkrState.selectedOption)
 
                     putInt(
                         "tpkrBegH",
-                        optionalTimePickerStateBegin!!.timePickerState.hourState.selectedOption
+                        optionalTimePickerStateBegin.timePickerState.hourState.selectedOption
                     )
                     putInt(
                         "tpkrBegM",
-                        optionalTimePickerStateBegin!!.timePickerState.minuteState.selectedOption
+                        optionalTimePickerStateBegin.timePickerState.minuteState.selectedOption
                     )
-                    putBoolean("tpkrBegEnabled", optionalTimePickerStateBegin!!.tpkrEnabled)
+                    putBoolean("tpkrBegEnabled", optionalTimePickerStateBegin.tpkrEnabled)
 
                     putInt(
                         "tpkrEndH",
-                        optionalTimePickerStateEnd!!.timePickerState.hourState.selectedOption
+                        optionalTimePickerStateEnd.timePickerState.hourState.selectedOption
                     )
                     putInt(
                         "tpkrEndM",
-                        optionalTimePickerStateEnd!!.timePickerState.minuteState.selectedOption
+                        optionalTimePickerStateEnd.timePickerState.minuteState.selectedOption
                     )
-                    putBoolean("tpkrEndEnabled", optionalTimePickerStateEnd!!.tpkrEnabled)
+                    putBoolean("tpkrEndEnabled", optionalTimePickerStateEnd.tpkrEnabled)
 
                     putInt("islrVibrationLevel", islrVibrationLevel)
                     putLong("islrVibrationDuration", islrVibrationDuration)
@@ -206,30 +167,29 @@ class MainActivity : ComponentActivity() {
         setTheme(android.R.style.Theme_DeviceDefault)
 
         setContent {
-            WearApp("Android", this)
-            //WearApp("Android", null)
+            WearApp(this)
+            //WearApp(null)
         }
     }
 
     override fun onPause()
     {
-        Core.save();
-        super.onPause();
+        Core.save()
+        super.onPause()
     }
 }
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
-fun WearApp(greetingName: String, ctx: Context?) {
+fun WearApp(ctx: Context?) {
     val btcap = listOf("❚❚", "▶")
     var pkrEnabled by remember { mutableStateOf(true) }
     val contentDescription by remember { derivedStateOf { "${Core.pkrState.selectedOption + 1}" } }
-    var btnChecked : MutableState<Boolean> = Core.btnChecked
+    val btnChecked : MutableState<Boolean> = Core.btnChecked
     val myAlarmIntent: Intent by lazy { Intent(ctx, AlarmReceiver::class.java) }
     var piAlarm : PendingIntent? = null
 
     var alarmManager: AlarmManager? = null
-    var piMySvc: PendingIntent? = null
     var piMySvcK: PendingIntent? = null
 
     val listState = rememberScalingLazyListState()
@@ -238,23 +198,8 @@ fun WearApp(greetingName: String, ctx: Context?) {
 
     //var expandedState by remember { mutableStateOf(false) }
     // begin
-    /*@Composable
-    fun rememberTimePickerState(
-        initiallySelectedOptionH: Int,
-        initiallySelectedOptionM: Int
-    ) = remember { TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM) }
-
-    @Composable
-    fun rememberOptionalTimePickerState(
-        initiallySelectedOptionH: Int,
-        initiallySelectedOptionM: Int,
-        initialEnabled: Boolean
-    ) = remember { OptionalTimePickerState(initiallySelectedOptionH, initiallySelectedOptionM, initialEnabled) }
-    */
 
     PhasigTheme {
-        val state = rememberSwipeToDismissBoxState()
-
         val maxPages = 2
         var selectedPage by remember { mutableStateOf(0) }
 
@@ -278,7 +223,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
             val state = rememberSwipeToDismissBoxState()
 
             @Composable
-            fun MainContent(): Unit
+            fun MainContent()
             {
                 HorizontalPager(
                     state = pagerState
@@ -478,9 +423,9 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 )
 
                                                 InlineSlider(
-                                                    value = Core.islrVibrationLevel as Float,
+                                                    value = Core.islrVibrationLevel.toFloat(),
                                                     onValueChange = {
-                                                        Core.islrVibrationLevel = it as Int
+                                                        Core.islrVibrationLevel = it.toInt()
                                                     },
                                                     increaseIcon = {
                                                         Icon(
@@ -543,6 +488,17 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                 Button(
                                     enabled = true,
                                     onClick = {
+                                        fun StartMainWork()
+                                        {
+                                            ctx?.startForegroundService(
+                                                Core.mysvcIntent
+                                            )
+                                        }
+
+                                        fun StopMainWork()
+                                        {
+                                            ctx?.stopService(Core.mysvcIntent)
+                                        }
 
                                         btnChecked.value = !btnChecked.value
 
@@ -551,9 +507,9 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                             //piMySvc?.let { alarmManager?.cancel(it) }
                                             piAlarm?.let { alarmManager?.cancel(it) }
                                             pkrEnabled = true
-                                            ctx?.stopService(Core.mysvcIntent)
+                                            StopMainWork()
                                         } else { // play
-                                            pkrEnabled = false;
+                                            pkrEnabled = false
                                             val threshold =
                                                 Core.pkrItems[Core.pkrState.selectedOption]
                                                     .toDouble()
@@ -568,18 +524,6 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 Core.islrVibrationDuration
                                             )
                                             Core.mysvcIntent.setAction("apply")
-
-                                            fun StartMainWork()
-                                            {
-                                                ctx?.startForegroundService(
-                                                    Core.mysvcIntent
-                                                )
-                                            }
-
-                                            fun StopMainWork()
-                                            {
-                                                ctx?.stopService(Core.mysvcIntent)
-                                            }
 
                                             fun GetDelayMsecFromTime(
                                                 h: Int,
@@ -602,7 +546,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 return delayMsec.toLong()
                                             }
 
-                                            with(Core.optionalTimePickerStateBegin!!)
+                                            with(Core.optionalTimePickerStateBegin)
                                             {
                                                 if (tpkrEnabled) {
                                                     if (ctx != null) {
@@ -611,7 +555,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             timePickerState.minuteState.selectedOption
                                                         )
 
-                                                        alarmManager = ctx?.getSystemService(
+                                                        alarmManager = ctx.getSystemService(
                                                             Context.ALARM_SERVICE
                                                         ) as AlarmManager
 
@@ -621,7 +565,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             pi
                                                         );*/
 
-                                                        var pia = PendingIntent.getBroadcast(
+                                                        val pia = PendingIntent.getBroadcast(
                                                             ctx,
                                                             0,
                                                             myAlarmIntent,
@@ -645,7 +589,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                 }
                                             }
 
-                                            with(Core.optionalTimePickerStateEnd!!)
+                                            with(Core.optionalTimePickerStateEnd)
                                             {
                                                 if (tpkrEnabled) {
                                                     if (ctx != null) {
@@ -654,7 +598,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             timePickerState.minuteState.selectedOption
                                                         )
 
-                                                        val mysvcKIntent: Intent = Intent(
+                                                        val mysvcKIntent = Intent(
                                                             ctx,
                                                             MyServiceKiller::class.java
                                                         )
@@ -665,14 +609,14 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                         mysvcKIntent.putExtra("actIntent", actIntent)
                                                         mysvcKIntent.setAction("apply")
 
-                                                        var pi = PendingIntent.getService(
+                                                        val pi = PendingIntent.getService(
                                                             ctx,
                                                             0,
                                                             mysvcKIntent,
                                                             PendingIntent.FLAG_CANCEL_CURRENT or
                                                                     PendingIntent.FLAG_IMMUTABLE
                                                         )
-                                                        alarmManager = ctx?.getSystemService(
+                                                        alarmManager = ctx.getSystemService(
                                                             Context.ALARM_SERVICE
                                                         ) as AlarmManager
 
@@ -680,7 +624,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                                             AlarmManager.RTC_WAKEUP,
                                                             System.currentTimeMillis() + delayEnd,
                                                             pi
-                                                        );
+                                                        )
                                                         /*alarmManager?.setAlarmClock(
                                                             AlarmManager.AlarmClockInfo(
                                                                 System.currentTimeMillis() + delayEnd,
@@ -696,7 +640,7 @@ fun WearApp(greetingName: String, ctx: Context?) {
                                         .align(Alignment.Center)
                                         .padding(top = 1.dp)
                                 ) {
-                                    Text("${btcap[if (btnChecked.value) 1 else 0]}")
+                                    Text(btcap[if (btnChecked.value) 1 else 0])
                                 }
                             }
                         }
@@ -735,5 +679,5 @@ fun WearApp(greetingName: String, ctx: Context?) {
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp("Preview Android", null)
+    WearApp(null)
 }
