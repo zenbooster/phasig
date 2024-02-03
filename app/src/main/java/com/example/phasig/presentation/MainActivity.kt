@@ -67,6 +67,7 @@ import androidx.wear.compose.material.Picker
 import androidx.wear.compose.material.PickerState
 import androidx.wear.compose.material.SwipeToDismissBox
 import androidx.wear.compose.material.Text
+import androidx.wear.compose.material.TimeText
 import com.example.phasig.presentation.theme.PhasigTheme
 import com.starry.greenstash.ui.common.ExpandableCard
 import java.text.DecimalFormat
@@ -394,15 +395,13 @@ fun WearApp(ctx: Context?) {
                                 Button(
                                     enabled = true,
                                     onClick = {
-                                        fun StartMainWork()
-                                        {
+                                        fun StartMainWork() {
                                             ctx?.startForegroundService(
                                                 Core.mysvcIntent
                                             )
                                         }
 
-                                        fun StopMainWork()
-                                        {
+                                        fun StopMainWork() {
                                             ctx?.stopService(Core.mysvcIntent)
                                         }
 
@@ -466,10 +465,10 @@ fun WearApp(ctx: Context?) {
                                                         ) as AlarmManager
 
                                                         /*alarmManager?.setExactAndAllowWhileIdle(
-                                                            AlarmManager.RTC_WAKEUP,
-                                                            System.currentTimeMillis() + delay,
-                                                            pi
-                                                        );*/
+                                                        AlarmManager.RTC_WAKEUP,
+                                                        System.currentTimeMillis() + delay,
+                                                        pi
+                                                    );*/
 
                                                         val pia = PendingIntent.getBroadcast(
                                                             ctx,
@@ -483,14 +482,15 @@ fun WearApp(ctx: Context?) {
                                                             AlarmManager.AlarmClockInfo(
                                                                 System.currentTimeMillis() + delay,
                                                                 null
-                                                            ), pia)
+                                                            ), pia
+                                                        )
                                                         piAlarm = pia
                                                         //piMySvc = pi
                                                     }
                                                 } else {
                                                     /*ctx?.startForegroundService(
-                                                        Core.mysvcIntent
-                                                    )*/
+                                                    Core.mysvcIntent
+                                                )*/
                                                     StartMainWork()
                                                 }
                                             }
@@ -511,8 +511,14 @@ fun WearApp(ctx: Context?) {
                                                         val actIntent = Intent(
                                                             ctx, MainActivity::class.java
                                                         )
-                                                        mysvcKIntent.putExtra("victim", Core.mysvcIntent)
-                                                        mysvcKIntent.putExtra("actIntent", actIntent)
+                                                        mysvcKIntent.putExtra(
+                                                            "victim",
+                                                            Core.mysvcIntent
+                                                        )
+                                                        mysvcKIntent.putExtra(
+                                                            "actIntent",
+                                                            actIntent
+                                                        )
                                                         mysvcKIntent.setAction("apply")
 
                                                         val pi = PendingIntent.getService(
@@ -532,10 +538,10 @@ fun WearApp(ctx: Context?) {
                                                             pi
                                                         )
                                                         /*alarmManager?.setAlarmClock(
-                                                            AlarmManager.AlarmClockInfo(
-                                                                System.currentTimeMillis() + delayEnd,
-                                                                null
-                                                            ), pi)*/
+                                                        AlarmManager.AlarmClockInfo(
+                                                            System.currentTimeMillis() + delayEnd,
+                                                            null
+                                                        ), pi)*/
                                                         piMySvcK = pi
                                                     }
                                                 }
@@ -552,6 +558,8 @@ fun WearApp(ctx: Context?) {
                         }
                     }
                 }
+
+                TimeText(modifier = Modifier.align(Alignment.TopCenter))
 
                 HorizontalPageIndicator(
                     pageIndicatorState = pageIndicatorState,
