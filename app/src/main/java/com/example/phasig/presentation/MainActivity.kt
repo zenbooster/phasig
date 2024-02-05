@@ -84,9 +84,7 @@ class Core {
         var sharedPref : SharedPreferences? = null
         val df = DecimalFormat("#.##")
         var btnChecked = mutableStateOf(true)
-        var pkrIdx : Int = 12
-        val pkrItems = List(101) { df.format(it) }
-        var pkrState : PickerState = PickerState(pkrItems.size, pkrIdx)
+        var pkrState : FracPickerState = FracPickerState(10.5f)
         var optionalTimePickerStateBegin : OptionalTimePickerState = OptionalTimePickerState()
         var optionalTimePickerStateEnd : OptionalTimePickerState = OptionalTimePickerState()
         var islrVibrationLevel = mutableStateOf(255f)
@@ -97,8 +95,8 @@ class Core {
         {
             if(ctx != null) {
                 sharedPref = ctx.getSharedPreferences("myPref", Context.MODE_PRIVATE)
-                pkrIdx = sharedPref!!.getInt("pkrIdx", 12)
-                pkrState = PickerState(pkrItems.size, pkrIdx)
+                val threshold = sharedPref!!.getFloat("threshold", 10.5f)
+                pkrState = FracPickerState(threshold)
 
                 optionalTimePickerStateBegin = OptionalTimePickerState(
                     sharedPref!!.getInt("tpkrBegH", 4),
@@ -122,7 +120,7 @@ class Core {
             if(sharedPref != null) {
                 with(sharedPref!!.edit())
                 {
-                    putInt("pkrIdx", pkrState.selectedOption)
+                    putFloat("threshold", pkrState.toFloat())
 
                     putInt(
                         "tpkrBegH",
@@ -178,29 +176,17 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun itemThreshold(enabled : Boolean) {
-    val contentDescription by remember { derivedStateOf { "${Core.pkrState.selectedOption + 1}" } }
+    val contentDescription by remember { derivedStateOf { "${Core.pkrState.toFloat()}" } }
 
-    ExpandableCard(title = "Threshold: ${Core.pkrItems[Core.pkrState.selectedOption]}") {
+    ExpandableCard(title = "Threshold: ${Core.pkrState.toFloat()}") {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            Picker(
-                modifier = Modifier.size(
-                    64.dp,
-                    100.dp
-                ),
-                state = Core.pkrState,
-                contentDescription = contentDescription,
-                userScrollEnabled = enabled,
-            ) {
-                Text(
-                    //text = "%02d".format(pkrItems[it]),
-                    text = Core.pkrItems[it],
-                    fontSize = 32.sp
-                )
-            }
+            FracPicker(
+                Core.pkrState,
+            )
         }
     }
 }

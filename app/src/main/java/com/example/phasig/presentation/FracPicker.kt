@@ -25,34 +25,45 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Picker
 import androidx.wear.compose.material.PickerState
 import androidx.wear.compose.material.Text
+import kotlin.math.round
 
-class TimePickerState(
+class FracPickerState(
     initiallySelectedOptionH: Int = 0,
     initiallySelectedOptionM: Int = 0
 ): DualPickerState(
-    24,
+    100,
     initiallySelectedOptionH,
-    "hours",
-    "%2d",
-    60,
-    initiallySelectedOptionM,
-    "minutes",
+    "units",
     "%02d",
-    ":") {
-    val hourState: PickerState
+    10,
+    initiallySelectedOptionM,
+    "tenths",
+    "%02d",
+    ".") {
+    val unitState: PickerState
         get() = leftState
-    val minuteState: PickerState
+    val units: Int
+        get() = unitState.selectedOption
+    val tenthState: PickerState
         get() = rightState
+    val tenths: Int
+        get() = tenthState.selectedOption
+
+    constructor(v: Float): this(v.toInt(), round((v - v.toInt().toFloat()) * 10.0f).toInt()) {}
+
+    fun toFloat(): Float {
+        return units.toFloat() + tenths.toFloat() * 0.1f
+    }
 }
 
 @Composable
-fun rememberTimePickerState(
-    initiallySelectedOptionH: Int,
-    initiallySelectedOptionM: Int
-) = remember { TimePickerState(initiallySelectedOptionH, initiallySelectedOptionM) }
+fun rememberFracPickerState(
+    initiallySelectedOptionU: Int,
+    initiallySelectedOptionT: Int
+) = remember { FracPickerState(initiallySelectedOptionU, initiallySelectedOptionT) }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun TimePicker(timePickerState: TimePickerState) {
-    DualPicker(dualPickerState = timePickerState)
+fun FracPicker(fracPickerState: FracPickerState) {
+    DualPicker(dualPickerState = fracPickerState)
 }

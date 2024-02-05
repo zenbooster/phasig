@@ -122,7 +122,7 @@ class MyService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        threshold = Core.pkrItems[Core.pkrState.selectedOption].toDouble()
+        threshold = Core.pkrState.toFloat().toDouble()
 
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager).run {
                 newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "phasig::MyWakelockTag").apply {
