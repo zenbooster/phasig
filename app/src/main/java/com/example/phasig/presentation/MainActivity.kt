@@ -89,8 +89,8 @@ class Core {
         var pkrState : PickerState = PickerState(pkrItems.size, pkrIdx)
         var optionalTimePickerStateBegin : OptionalTimePickerState = OptionalTimePickerState()
         var optionalTimePickerStateEnd : OptionalTimePickerState = OptionalTimePickerState()
-        var islrVibrationLevel = 255
-        var islrVibrationDuration = 375L
+        var islrVibrationLevel = mutableStateOf(255f)
+        var islrVibrationDuration = mutableStateOf(375f)
         var mysvcIntent: Intent = Intent()
 
         fun init(ctx : Context?)
@@ -111,8 +111,8 @@ class Core {
                     sharedPref!!.getBoolean("tpkrEndEnabled", false)
                 )
 
-                islrVibrationLevel = sharedPref!!.getInt("islrVibrationLevel", 255)
-                islrVibrationDuration = sharedPref!!.getLong("islrVibrationDuration", 375L)
+                islrVibrationLevel.value = sharedPref!!.getInt("islrVibrationLevel", 255).toFloat()
+                islrVibrationDuration.value = sharedPref!!.getLong("islrVibrationDuration", 375L).toFloat()
 
                 mysvcIntent.setClass(ctx, MyService::class.java)
             }
@@ -144,8 +144,8 @@ class Core {
                     )
                     putBoolean("tpkrEndEnabled", optionalTimePickerStateEnd.tpkrEnabled)
 
-                    putInt("islrVibrationLevel", islrVibrationLevel)
-                    putLong("islrVibrationDuration", islrVibrationDuration)
+                    putInt("islrVibrationLevel", islrVibrationLevel.value.toInt())
+                    putLong("islrVibrationDuration", islrVibrationDuration.value.toLong())
                     apply()
                 }
             }
@@ -176,13 +176,154 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@Composable
+fun itemThreshold(enabled : Boolean) {
+    val contentDescription by remember { derivedStateOf { "${Core.pkrState.selectedOption + 1}" } }
+
+    ExpandableCard(title = "Threshold: ${Core.pkrItems[Core.pkrState.selectedOption]}") {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Picker(
+                modifier = Modifier.size(
+                    64.dp,
+                    100.dp
+                ),
+                state = Core.pkrState,
+                contentDescription = contentDescription,
+                userScrollEnabled = enabled,
+            ) {
+                Text(
+                    //text = "%02d".format(pkrItems[it]),
+                    text = Core.pkrItems[it],
+                    fontSize = 32.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun itemBeginAt() {
+    with(Core.optionalTimePickerStateBegin) {
+        ExpandableCard(
+            title = "begin at " +
+                    if (tpkrEnabled) {
+                        "%02d:".format(
+                            timePickerState.hourState.selectedOption
+                        ) +
+                                "%02d".format(
+                                    timePickerState.minuteState.selectedOption
+                                )
+                    } else {
+                        "now"
+                    }
+        ) {
+            OptionalTimePicker(
+                "Use time:",
+                Core.optionalTimePickerStateBegin
+            )
+        }
+    }
+}
+
+@Composable
+fun itemEndAt() {
+    with(Core.optionalTimePickerStateEnd) {
+        ExpandableCard(
+            title = "end at " +
+                    if (tpkrEnabled) {
+                        "%02d:".format(
+                            timePickerState.hourState.selectedOption
+                        ) +
+                                "%02d".format(
+                                    timePickerState.minuteState.selectedOption
+                                )
+                    } else {
+                        "never"
+                    }
+        ) {
+            OptionalTimePicker(
+                "Use time:",
+                Core.optionalTimePickerStateEnd
+            )
+        }
+    }
+}
+
+@Composable
+fun itemVibration() {
+    ExpandableCard(title = "vibration") {
+        Column() {
+            Text(
+                modifier = Modifier
+                    //.align(Alignment.Center)
+                    .padding(top = 1.dp),
+                text = "Level:"
+            )
+
+            InlineSlider(
+                value = Core.islrVibrationLevel.value,
+                onValueChange = {
+                    Core.islrVibrationLevel.value = it
+                },
+                increaseIcon = {
+                    Icon(
+                        InlineSliderDefaults.Increase,
+                        "Increase"
+                    )
+                },
+                decreaseIcon = {
+                    Icon(
+                        InlineSliderDefaults.Decrease,
+                        "Decrease"
+                    )
+                },
+                valueRange = 0f..255.0f,
+                steps = 8,
+                segmented = true
+            )
+
+            Text(
+                modifier = Modifier
+                    //.align(Alignment.Center)
+                    .padding(top = 1.dp),
+                text = "Duration:"
+            )
+
+            InlineSlider(
+                value = Core.islrVibrationDuration.value,
+                onValueChange = {
+                    Core.islrVibrationDuration.value = it
+                },
+                increaseIcon = {
+                    Icon(
+                        InlineSliderDefaults.Increase,
+                        "Increase"
+                    )
+                },
+                decreaseIcon = {
+                    Icon(
+                        InlineSliderDefaults.Decrease,
+                        "Decrease"
+                    )
+                },
+                valueRange = 0f..1000.0f,
+                steps = 8,
+                segmented = true
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun WearApp(ctx: Context?) {
     val btcap = listOf("❚❚", "▶")
-    var pkrEnabled by remember { mutableStateOf(true) }
-    val contentDescription by remember { derivedStateOf { "${Core.pkrState.selectedOption + 1}" } }
     val btnChecked : MutableState<Boolean> = Core.btnChecked
+    var pkrEnabled by remember { mutableStateOf(true) }
     val myAlarmIntent: Intent by lazy { Intent(ctx, AlarmReceiver::class.java) }
     var piAlarm : PendingIntent? = null
 
@@ -244,139 +385,19 @@ fun WearApp(ctx: Context?) {
                                         .fillMaxWidth()
                                 ) {
                                     item {
-                                        ExpandableCard(title = "Threshold: ${Core.pkrItems[Core.pkrState.selectedOption]}") {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.Center,
-                                            ) {
-                                                Picker(
-                                                    modifier = Modifier.size(
-                                                        64.dp,
-                                                        100.dp
-                                                    ),
-                                                    state = Core.pkrState,
-                                                    contentDescription = contentDescription,
-                                                    userScrollEnabled = pkrEnabled,
-                                                ) {
-                                                    Text(
-                                                        //text = "%02d".format(pkrItems[it]),
-                                                        text = Core.pkrItems[it],
-                                                        fontSize = 32.sp
-                                                    )
-                                                }
-                                            }
-                                        }
+                                        itemThreshold(pkrEnabled)
                                     }
 
                                     item {
-                                        with(Core.optionalTimePickerStateBegin) {
-                                            ExpandableCard(
-                                                title = "begin at " +
-                                                        if (tpkrEnabled) {
-                                                            "%02d:".format(
-                                                                timePickerState.hourState.selectedOption
-                                                            ) +
-                                                                    "%02d".format(
-                                                                        timePickerState.minuteState.selectedOption
-                                                                    )
-                                                        } else {
-                                                            "now"
-                                                        }
-                                            ) {
-                                                OptionalTimePicker(
-                                                    "Use time:",
-                                                    Core.optionalTimePickerStateBegin
-                                                )
-                                            }
-                                        }
+                                        itemBeginAt()
                                     }
 
                                     item {
-                                        with(Core.optionalTimePickerStateEnd) {
-                                            ExpandableCard(
-                                                title = "end at " +
-                                                        if (tpkrEnabled) {
-                                                            "%02d:".format(
-                                                                timePickerState.hourState.selectedOption
-                                                            ) +
-                                                                    "%02d".format(
-                                                                        timePickerState.minuteState.selectedOption
-                                                                    )
-                                                        } else {
-                                                            "never"
-                                                        }
-                                            ) {
-                                                OptionalTimePicker(
-                                                    "Use time:",
-                                                    Core.optionalTimePickerStateEnd
-                                                )
-                                            }
-                                        }
+                                        itemEndAt()
                                     }
 
                                     item {
-                                        ExpandableCard(title = "vibration") {
-                                            Column() {
-                                                Text(
-                                                    modifier = Modifier
-                                                        //.align(Alignment.Center)
-                                                        .padding(top = 1.dp),
-                                                    text = "Level:"
-                                                )
-
-                                                InlineSlider(
-                                                    value = Core.islrVibrationLevel.toFloat(),
-                                                    onValueChange = {
-                                                        Core.islrVibrationLevel = it.toInt()
-                                                    },
-                                                    increaseIcon = {
-                                                        Icon(
-                                                            InlineSliderDefaults.Increase,
-                                                            "Increase"
-                                                        )
-                                                    },
-                                                    decreaseIcon = {
-                                                        Icon(
-                                                            InlineSliderDefaults.Decrease,
-                                                            "Decrease"
-                                                        )
-                                                    },
-                                                    valueRange = 0f..255.0f,
-                                                    steps = 8,
-                                                    segmented = true
-                                                )
-
-                                                Text(
-                                                    modifier = Modifier
-                                                        //.align(Alignment.Center)
-                                                        .padding(top = 1.dp),
-                                                    text = "Duration:"
-                                                )
-
-                                                InlineSlider(
-                                                    value = Core.islrVibrationDuration.toFloat(),
-                                                    onValueChange = {
-                                                        Core.islrVibrationDuration = it.toLong()
-                                                    },
-                                                    increaseIcon = {
-                                                        Icon(
-                                                            InlineSliderDefaults.Increase,
-                                                            "Increase"
-                                                        )
-                                                    },
-                                                    decreaseIcon = {
-                                                        Icon(
-                                                            InlineSliderDefaults.Decrease,
-                                                            "Decrease"
-                                                        )
-                                                    },
-                                                    valueRange = 0f..1000.0f,
-                                                    steps = 8,
-                                                    segmented = true
-                                                )
-                                            }
-                                        }
+                                        itemVibration()
                                     }
                                 }
                             }

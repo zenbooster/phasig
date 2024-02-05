@@ -50,7 +50,7 @@ class MyService : Service(), SensorEventListener {
                 val vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
                 val vibrationEffect1: VibrationEffect
                 vibrationEffect1 =
-                    VibrationEffect.createOneShot(Core.islrVibrationDuration, Core.islrVibrationLevel)
+                    VibrationEffect.createOneShot(Core.islrVibrationDuration.value.toLong(), Core.islrVibrationLevel.value.toInt())
 
                 // it is safe to cancel other vibrations currently taking place
                 vibrator.cancel()
