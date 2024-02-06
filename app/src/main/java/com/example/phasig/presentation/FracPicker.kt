@@ -38,7 +38,7 @@ class FracPickerState(
     10,
     initiallySelectedOptionM,
     "tenths",
-    "%02d",
+    "%d",
     ".") {
     val unitState: PickerState
         get() = leftState
